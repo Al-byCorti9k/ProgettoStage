@@ -2,52 +2,67 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import pathlib
-from sklearn import linear_model, model_selection
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer, make_column_selector as selector
+from sklearn import linear_model, model_selection 
 from sklearn.metrics import matthews_corrcoef
+from sklearn.pipeline import make_pipeline
+# import array
 
-import array
-#ottengo il percorso del file Main.py
+# ottengo il percorso del file Main.py
 p = pathlib.Path(__file__)
 
-#ottengo il percorso del file .csv
-p_csv = pathlib.PurePath(p).parents[2].joinpath("data", "100_7717_peerj_5665_dataYM2018_neuroblastoma.csv")
+# ottengo il percorso del file .csv
+name_csv = "100_7717_peerj_5665_dataYM2018_neuroblastoma.csv"
+p_csv = pathlib.PurePath(p).parents[2].joinpath("data", name_csv)
+                                                
 
-#importo il dataset in un oggetto dataframe
-df = pd.read_csv(p_csv)
+
+# prima di importare il dataset, mi assicuro che le colonne vengano abbiano 
+# il tipo corretto. La maggior parte dei dati sono "categorici", 
+# ossia i valori appartengono a delle classi.
+cat_cols = ['age', 'sex', 'site', 'stage', 'risk',
+       'autologous_stem_cell_transplantation', 'radiation',
+       'degree_of_differentiation', 'UH_or_FH', 'MYCN_status ',
+       'surgical_methods', 'outcome']
+dtype_dict = {col: "category" for col in cat_cols}
+
+# importo il dataset in un oggetto dataframe
+df = pd.read_csv(p_csv, dtype = dtype_dict)
 print(df.tail(5))
 
 #ottengo tutte le colonne
 x_predictor = df[df.columns[:-1]]
-#print(x_predictor.shape)
 y_response = df[df.columns[-1]]
-#print(y_response.shape)
 
-
-#sezione aggiornata
-
-#obiettivo: leave-one-out cross validation per verificare che il modello
-#abbia una capacità di generalizzazione solida. 
-
-
-
-#importiamo il modello sulla quale si baserà l'algoritmo di machine learning
-#NOTA al momento uso la logisticregression, di modo che i dati siano binari.
-# questo ha dei problemi di performance perchè l'algoritmo potrebbe non finire 
-# ben precisato di passi. 
+# uso la classificazione con regressione logistica e LOOCV 
 model = linear_model.LogisticRegression(max_iter = 1000)
-
-#indichiamo il metodo che useremo per validare le capacità di generalizzazione
 cvp = model_selection.LeaveOneOut()
 
-#possiamo avviare la validazione. Ho scelto la funzione cross_val_predict.
-# rispetto alle altre due alternative (cross_val, cross_val_score) mi permette
-# di ricavare comodamente tutti i valori delle predizioni nei singoli fold.
-# tornerà utile per il calcolo dell'MCC
+# preprocessare i dati è fondamentale per rendere comparabili i valori 
+# categorici con quelli numerici, i quali a loro volta vengono scalati 
+# per permettere un confronto adeguato
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', StandardScaler(), selector(dtype_exclude="category")),
+        ('cat', OneHotEncoder(), selector(dtype_include="category"))
+    ]
+)
+# creo una pipeline che effettua il preprocessing e poi applica il modello
+clf = make_pipeline(preprocessor, model)
 
-y_predict = model_selection.cross_val_predict(model, x_predictor, y_response, cv = cvp )
-print(y_predict)
+# viene effettuata la LOOCV predittiva, in modo da ottenere 
+# le previsioni di ciascun fold, per poi valutare la prestazione
+# del modello con la metrica MCC
+y_predict = model_selection.cross_val_predict(clf, x_predictor, y_response, cv = cvp )
+
+#print(y_predict.shape)
+#print(y_response)
+#print(y_response.value_counts(normalize=True))
+#print(df.dtypes)
 
 MCC = matthews_corrcoef(y_response, y_predict)
 print(MCC)
+# MCC = 0.4512987012987013
 
-# MCC = 0.46382761282805135 bassa correlazione
+
