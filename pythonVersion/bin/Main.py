@@ -7,7 +7,10 @@ from sklearn.compose import ColumnTransformer, make_column_selector as selector
 from sklearn import linear_model, model_selection 
 from sklearn.metrics import matthews_corrcoef
 from sklearn.pipeline import make_pipeline
-# import array
+
+
+# Versione Python del classificatore binario con regressione lineare e LeaveOneOut cross validation
+# per progetto di stage e tesi presso l'università Milano Bicocca
 
 # ottengo il percorso del file Main.py
 p = pathlib.Path(__file__)
@@ -54,15 +57,21 @@ clf = make_pipeline(preprocessor, model)
 # viene effettuata la LOOCV predittiva, in modo da ottenere 
 # le previsioni di ciascun fold, per poi valutare la prestazione
 # del modello con la metrica MCC
-y_predict = model_selection.cross_val_predict(clf, x_predictor, y_response, cv = cvp )
 
-#print(y_predict.shape)
+y_predict = model_selection.cross_val_predict(clf, x_predictor, y_response, cv = cvp )
+time = model_selection.cross_validate(clf, x_predictor, y_response, cv = cvp)
+
+#print(y_predict.shape) 
 #print(y_response)
 #print(y_response.value_counts(normalize=True))
 #print(df.dtypes)
 
 MCC = matthews_corrcoef(y_response, y_predict)
-print(MCC)
+t = np.sum(time["fit_time"])
+print("coefficiente MCC del classificatore: ", MCC)
+print("tempo di esecuzione di LOOCV in secondi: "+ str(t) + " s")
+print("tempo di esecuzione di LOOCV in ms: " + str(t * 1000) + " ms")
 # MCC = 0.4512987012987013
+
 
 
