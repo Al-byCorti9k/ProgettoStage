@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import pathlib
-from sklearn import linear_model, model_selection 
+#from sklearn import linear_model, model_selection 
 from sklearn.metrics import matthews_corrcoef
 import dataprocess
 import helper
@@ -15,7 +15,6 @@ helper.showAssociationList(args.al)
 
 #gestione casistica scelta multipla dei datasets. ottengo delle liste
 #dtype_dict, name_csv = helper.multipleDatasetSelection(args.i)
-#TODO FARE IN MODO CHE NON CI SIANO ELEMENTI RIPETUTI IN ARGS.I
 dtype_csv_dict = helper.multipleDatasetSelection(args.i)
 
 for key, value in dtype_csv_dict.items():
@@ -25,11 +24,22 @@ for key, value in dtype_csv_dict.items():
     p = pathlib.Path(__file__)
     p_csv = pathlib.PurePath(p).parents[2].joinpath("data", name_csv)
     df = pd.read_csv(p_csv, dtype = dtype_dict)
-    print(df.tail(5))
+    helper.datasetPreview(df, name_csv)
     #ottengo tutte le colonne
     x_predictor, y_response = dataprocess.columnPredictionSelect(args.cn, df)
 
+    y_predict, time = dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
 
+    MCC = matthews_corrcoef(y_response, y_predict)
+    t = np.sum(time["fit_time"])
+    print("coefficiente MCC del classificatore: ", MCC)
+    print("tempo di esecuzione di LOOCV in secondi: "+ str(t) + " s")
+    print("tempo di esecuzione di LOOCV in ms: " + str(t * 1000) + " ms")
+
+
+
+
+'''
     # uso la classificazione con regressione logistica e LOOCV 
     model = linear_model.LogisticRegression(max_iter = 1000)
     cvp = model_selection.LeaveOneOut()
@@ -47,15 +57,4 @@ for key, value in dtype_csv_dict.items():
 
     y_predict = model_selection.cross_val_predict(clf, x_predictor, y_response, cv = cvp )
     time = model_selection.cross_validate(clf, x_predictor, y_response, cv = cvp)
-
-
-
-    MCC = matthews_corrcoef(y_response, y_predict)
-    t = np.sum(time["fit_time"])
-    print("coefficiente MCC del classificatore: ", MCC)
-    print("tempo di esecuzione di LOOCV in secondi: "+ str(t) + " s")
-    print("tempo di esecuzione di LOOCV in ms: " + str(t * 1000) + " ms")
-
-
-
-
+'''

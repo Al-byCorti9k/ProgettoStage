@@ -57,5 +57,13 @@ def showAssociationList(userCheck):
         for datasets in Dataset:
             space = 20 - len(datasets.name)
             print(datasets.name+":"+"{:>{}}".format(str(datasets.value), space)) 
-        exit()
-    
+        exit("\n")
+
+#stampa una preview delle ultime 5 righe del dataset
+def datasetPreview(dataset, name_csv ):
+    position = dataprocess.datasets.index(name_csv) + 1
+
+    infoMessage = "\nSelected dataset:\t"+Dataset(position).name+"\n"
+    print(infoMessage)
+    print(dataset.tail(5))
+    print("\n")

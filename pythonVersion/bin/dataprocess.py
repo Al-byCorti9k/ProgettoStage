@@ -5,7 +5,8 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer, make_column_selector as selector
-
+from sklearn import linear_model, model_selection 
+from sklearn.metrics import matthews_corrcoef
 
 
 datasets = ["journal.pone.0148699_S1_Text_Sepsis_SIRS_EDITED.csv",
@@ -51,17 +52,14 @@ def columnPredictionSelect(columnName, dataFrame ):
     #controllo se esiste la colonna selezionata ed è di tipo category
     if columnName != None:
         
-        condition1 = dataFrame[columnName].dtype == "category"
-        condition2 = columnName in dataFrame
-        
-        if condition1 and condition2:
-            x_predictor = dataFrame.drop(columnName, axis=1)
-            y_response = dataFrame[columnName]
-        else:
-            if condition1 == False:
-                exit("la colonna selezionata \""+columnName+"\" non è categorica")
+        if columnName in dataFrame.columns.tolist():
+            if dataFrame[columnName].dtype == "category":
+                x_predictor = dataFrame.drop(columnName, axis=1)
+                y_response = dataFrame[columnName]
             else:
-                exit("la colonna selezionata \""+columnName+"\" non è presente nel dataset")
+                exit("\nla colonna selezionata \""+columnName+"\" non è categorica\n")
+        else:
+            exit("\nla colonna selezionata \""+columnName+"\" non è presente nel dataset\n")
 
     else:
         #caso di default, dove scelgo l'ultima colonna
@@ -92,3 +90,38 @@ preprocessor = ColumnTransformer(
         ('cat', categorical_trasformer, selector(dtype_include="category"))
     ]
 )
+
+from codecarbon import OfflineEmissionsTracker
+tracker = OfflineEmissionsTracker(country_iso_code="ITA")
+
+ # uso la classificazione con regressione logistica e LOOCV 
+model = linear_model.LogisticRegression(max_iter = 1000)
+cvp = model_selection.LeaveOneOut()
+
+# preprocessare i dati è fondamentale per rendere comparabili i valori 
+# categorici con quelli numerici, i quali a loro volta vengono scalati 
+# per permettere un confronto adeguato
+
+# creo una pipeline che effettua il preprocessing e poi applica il modello
+clf = make_pipeline(preprocessor, model)
+
+# viene effettuata la LOOCV predittiva, in modo da ottenere 
+# le previsioni di ciascun fold, per poi valutare la prestazione
+# del modello con la metrica MCC
+
+
+def Logistic_Regression_Validation(x_predictor, y_response):
+   
+
+  #TODO capire come sistemare la stampa dei messaggi, non mi piace per niente
+  # questa gestione poco trasparente e che su windows non può effettuare misure precise
+  # perchè si affida completamente ad una componente deprecata 
+    tracker.start()
+    y_predict = model_selection.cross_val_predict(clf, x_predictor, y_response, cv = cvp )
+    tracker.stop()
+    
+    time = model_selection.cross_validate(clf, x_predictor, y_response, cv = cvp)
+    
+ 
+    
+    return y_predict, time
