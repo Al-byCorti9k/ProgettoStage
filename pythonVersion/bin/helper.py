@@ -3,6 +3,7 @@
 import argparse
 from enum import Enum
 import dataprocess
+import logging
 
 parser = argparse.ArgumentParser(prog='benchmarkOfSMLM',
                                  description = "programma per il calcolo della LOOCV, MCC, consumi energetici di un modello di regressione lineare",
@@ -67,3 +68,5 @@ def datasetPreview(dataset, name_csv ):
     print(infoMessage)
     print(dataset.tail(5))
     print("\n")
+
+

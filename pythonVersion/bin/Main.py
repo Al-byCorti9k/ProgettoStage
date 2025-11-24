@@ -26,9 +26,11 @@ for key, value in dtype_csv_dict.items():
     df = pd.read_csv(p_csv, dtype = dtype_dict)
     helper.datasetPreview(df, name_csv)
     #ottengo tutte le colonne
+
     x_predictor, y_response = dataprocess.columnPredictionSelect(args.cn, df)
 
     y_predict, time = dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
+    
 
     MCC = matthews_corrcoef(y_response, y_predict)
     t = np.sum(time["fit_time"])

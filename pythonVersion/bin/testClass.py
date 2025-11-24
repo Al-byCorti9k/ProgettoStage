@@ -9,6 +9,7 @@ from sklearn.metrics import matthews_corrcoef
 from sklearn.pipeline import make_pipeline
 from enum import Enum
 import argparse
+import os
 
 # Versione Python del classificatore binario con regressione lineare e LeaveOneOut cross validation
 # per progetto di stage e tesi presso l'università Milano Bicocca
@@ -49,6 +50,33 @@ print(lista[1])
 pippo = None
 if pippo == None:
     print("sabaku")
+
+import subprocess
+
+def run_admin_command(cmd):
+
+    ps = cmd.replace('"', '`"') # escape per sicurezza
+    subprocess.run([
+        "powershell",
+        "-Command",
+        f"Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile -Command \"{cmd}\"'"
+    ])
+path = r"C:\Users\utente\Desktop\Bicocca\Stage\ProgettoStage\pythonVersion\bin"
+collector = r"vtune -collect system-overview -no-analyze-system -knob analyze-power-usage=true -- python Main.py"
+converter_to_csv = r"vtune -report summary -result-dir ./r008so -report-output system_overview.csv -format csv -csv-delimiter comma"
+
+script = f'''
+Set-Location "{path}"
+{collector}
+{converter_to_csv}
+exit
+'''
+run_admin_command(script)
+
+
+
+
+
 '''
 class Animal(Enum):
     ant = 1
@@ -75,7 +103,7 @@ while(guard):
 match lang:
     case Animal.ant.value:
         print("ciao formica")
-    case Animal.bee.value:
+    case Animal.bee.value:clear
         print("ciao apetta")
     case Animal.cat.value:
         print("ciao micino")
