@@ -1,4 +1,4 @@
-import pandas as pd
+
 import numpy as np
 import matplotlib.pyplot as plt
 import pathlib
@@ -51,27 +51,67 @@ pippo = None
 if pippo == None:
     print("sabaku")
 
+
+from datetime import datetime
+
+now = datetime.now()
+now_str = now.strftime("%Y-%m-%d_%Hh-%Mm-%Ss")
+print(now_str)
+
 import subprocess
+p = pathlib.Path(__file__)
+p_csv = pathlib.PurePath(p).parents[1].joinpath("results",now_str)
+exp_csv = f"experiment_{now_str}.csv"
+f_csv = pathlib.PurePath(p).parents[1].joinpath("results",exp_csv)
+path = pathlib.PurePath(p).parents[1]
+result_path = rf"..\results\experiment_{now_str}"
+collector = rf"vtune -collect system-overview -r {p_csv} -knob analyze-power-usage=true -- python Main.py"
+converter_to_csv = rf"vtune -report summary -result-dir {p_csv} -report-output {f_csv} -format csv -csv-delimiter comma"
 
-def run_admin_command(cmd):
 
-    ps = cmd.replace('"', '`"') # escape per sicurezza
-    subprocess.run([
-        "powershell",
-        "-Command",
-        f"Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile -Command \"{cmd}\"'"
-    ])
-path = r"C:\Users\utente\Desktop\Bicocca\Stage\ProgettoStage\pythonVersion\bin"
-collector = r"vtune -collect system-overview -no-analyze-system -knob analyze-power-usage=true -- python Main.py"
-converter_to_csv = r"vtune -report summary -result-dir ./r008so -report-output system_overview.csv -format csv -csv-delimiter comma"
 
-script = f'''
-Set-Location "{path}"
-{collector}
-{converter_to_csv}
-exit
-'''
-run_admin_command(script)
+
+
+
+#TODO provare a fare un esempio prototipo per fare il test che dicevi.
+
+# Source - https://stackoverflow.com/a
+# Posted by Martín De la Fuente, modified by community. See post 'Timeline' for change history
+# Retrieved 2025-11-26, License - CC BY-SA 4.0
+
+def run_command(cmd):
+    process = subprocess.Popen(
+         cmd,
+         shell=True,
+         stdout=subprocess.PIPE,
+         stderr=subprocess.PIPE,
+         universal_newlines=True,
+         cwd=path
+         )
+    stdout, stderr = process.communicate()
+    return process.returncode, stdout, stderr
+
+
+import ctypes, sys
+
+def is_admin():
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
+
+if is_admin():
+    run_command(collector)
+    returncode, stdout, stderr = run_command(converter_to_csv)
+    if returncode != 0:
+        print(f"error listing directory: {stderr}")
+    print(returncode)
+else:
+    # Re-run the program with admin rights
+    ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+
+
+
 
 
 
