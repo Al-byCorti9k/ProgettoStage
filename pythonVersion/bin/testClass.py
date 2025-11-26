@@ -2,6 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pathlib
+import pandas as pd
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer, make_column_selector as selector
 from sklearn import linear_model, model_selection 
@@ -65,19 +66,10 @@ exp_csv = f"experiment_{now_str}.csv"
 f_csv = pathlib.PurePath(p).parents[1].joinpath("results",exp_csv)
 path = pathlib.PurePath(p).parents[1]
 result_path = rf"..\results\experiment_{now_str}"
-collector = rf"vtune -collect system-overview -r {p_csv} -knob analyze-power-usage=true -- python Main.py"
+collector = rf"vtune -collect system-overview -no-analyze-system -r {p_csv} -knob analyze-power-usage=true -- python Main.py"
 converter_to_csv = rf"vtune -report summary -result-dir {p_csv} -report-output {f_csv} -format csv -csv-delimiter comma"
 
 
-
-
-
-
-#TODO provare a fare un esempio prototipo per fare il test che dicevi.
-
-# Source - https://stackoverflow.com/a
-# Posted by Martín De la Fuente, modified by community. See post 'Timeline' for change history
-# Retrieved 2025-11-26, License - CC BY-SA 4.0
 
 def run_command(cmd):
     process = subprocess.Popen(
@@ -88,8 +80,8 @@ def run_command(cmd):
          universal_newlines=True,
          cwd=path
          )
-    stdout, stderr = process.communicate()
-    return process.returncode, stdout, stderr
+    process.communicate()
+    
 
 
 import ctypes, sys
@@ -99,20 +91,51 @@ def is_admin():
         return ctypes.windll.shell32.IsUserAnAdmin()
     except:
         return False
-
+flag =pathlib.Path(__file__).parent / "child_done.flag"
+time = pathlib.Path(__file__).parent / "time_time.flag"
+output = p.parents[1].joinpath("results",exp_csv)
 if is_admin():
     run_command(collector)
-    returncode, stdout, stderr = run_command(converter_to_csv)
-    if returncode != 0:
-        print(f"error listing directory: {stderr}")
-    print(returncode)
+    run_command(converter_to_csv)
+    if output.exists():
+        exit_code = 0
+    else:
+        exit_code = 1
+    # scrivi il file di stato
+    
+    flag.write_text(str(exit_code))
+    time.write_text(str(now_str))
+    
+    sys.exit(exit_code)
 else:
     # Re-run the program with admin rights
     ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
 
+while True:
+    if flag.exists():
+        exit_code = int(flag.read_text())
+        print("Exit code:", exit_code)
+        flag.unlink()
+
+        break
 
 
+import csv
+energyConsumption = []
+if time.exists():
+    text = time.read_text()
+    time.unlink()
+f_csv = pathlib.PurePath(p).parents[1].joinpath("results",f"experiment_{text}.csv")
 
+with open(f_csv,'rt') as f:
+    data = csv.reader(f)
+    for row in data:
+        if any("Package_0" in cell for cell in row):
+         energyConsumption.append(row)
+         
+print(f"il consumo energetico in mJ è: {energyConsumption[1][2]} mJ")
+
+print("fine del programma!!")
 
 
 

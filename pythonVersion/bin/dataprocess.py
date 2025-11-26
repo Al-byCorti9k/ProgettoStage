@@ -91,8 +91,8 @@ preprocessor = ColumnTransformer(
     ]
 )
 
-from codecarbon import OfflineEmissionsTracker
-tracker = OfflineEmissionsTracker(country_iso_code="ITA")
+#from codecarbon import OfflineEmissionsTracker
+#tracker = OfflineEmissionsTracker(country_iso_code="ITA")
 
  # uso la classificazione con regressione logistica e LOOCV 
 model = linear_model.LogisticRegression(max_iter = 1000)
@@ -116,9 +116,9 @@ def Logistic_Regression_Validation(x_predictor, y_response):
   #TODO capire come sistemare la stampa dei messaggi, non mi piace per niente
   # questa gestione poco trasparente e che su windows non può effettuare misure precise
   # perchè si affida completamente ad una componente deprecata 
-    tracker.start()
+  #  tracker.start()
     y_predict = model_selection.cross_val_predict(clf, x_predictor, y_response, cv = cvp )
-    tracker.stop()
+  #  tracker.stop()
     
     time = model_selection.cross_validate(clf, x_predictor, y_response, cv = cvp)
     
