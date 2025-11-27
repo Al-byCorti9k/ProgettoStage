@@ -33,7 +33,7 @@ for key, value in dtype_csv_dict.items():
     x_predictor, y_response, columnNotExist, columnNonCat  = dataprocess.columnPredictionSelect(args.cn, df)
    
    
-    if columnNotExist or columnNonCat or args.v != None:
+    if columnNotExist or columnNonCat or args.v :
         continue
     y_predict, time = dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
     
@@ -44,7 +44,8 @@ for key, value in dtype_csv_dict.items():
     print("coefficiente MCC del classificatore: ", MCC)
     print("tempo di esecuzione di LOOCV in secondi: "+ str(t) + " s")
     print("tempo di esecuzione di LOOCV in ms: " + str(t * 1000) + " ms")
-    print(consumptions)
+    if consumptions != 0:
+        print(consumptions)
 
 
 

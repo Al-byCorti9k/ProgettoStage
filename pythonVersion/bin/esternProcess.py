@@ -77,7 +77,7 @@ def VTuneProfilerInterface(dataset):
 					#script_path = pathlib.PurePath(p).parents[1].joinpath("results", "Main.py")
 					#args = f'"{script_path}" -i "{dataset}"'
 					print("ciao prova")
-					ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argsv), None, 1)
+					ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
 					#ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
 
 	# quando il processo padre chiama il "figlio" si mette in attesa finchè i report flag e time
