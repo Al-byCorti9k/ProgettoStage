@@ -6,8 +6,8 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer, make_column_selector as selector
 from sklearn import linear_model, model_selection 
 from sklearn.metrics import matthews_corrcoef
-
-
+import platform
+import esternProcess
 
 datasets = ["journal.pone.0148699_S1_Text_Sepsis_SIRS_EDITED.csv",
             "10_7717_peerj_5665_dataYM2018_neuroblastoma.csv",
@@ -25,7 +25,7 @@ categoryData = {
                 'degree_of_differentiation', 'UH_or_FH', 'MYCN_status ',
                 'surgical_methods', 'outcome'],
     datasets[2]:
-            ['Male', 'Etiology', 'Death', 'Hospitalized'],
+            ['Male (1=Yes, 0=No)', 'Etiology HF(1=Yes, 0=No)', 'Death (1=Yes, 0=No)', 'Hospitalized (1=Yes, 0=No)'],
     
     datasets[3]:
             [ 'Exitus', 'sex_woman', 'Endotracheal_intubation',
@@ -49,6 +49,10 @@ def datasetsSelection(selectedDataset):
 #funzione che ritorna i dataframe divisi in gruppo da predirre e 
 #gruppo da usare per la predizione.
 def columnPredictionSelect(columnName, dataFrame ):
+    columnNotExist = False
+    columnNonCat = False
+    x_predictor = None
+    y_response = None
     #controllo se esiste la colonna selezionata ed è di tipo category
     if columnName != None:
         
@@ -57,16 +61,19 @@ def columnPredictionSelect(columnName, dataFrame ):
                 x_predictor = dataFrame.drop(columnName, axis=1)
                 y_response = dataFrame[columnName]
             else:
-                exit("\nla colonna selezionata \""+columnName+"\" non è categorica\n")
+                print("\nla colonna selezionata \""+columnName+"\" non è categorica\n")
+                columnNotExist = True
         else:
-            exit("\nla colonna selezionata \""+columnName+"\" non è presente nel dataset\n")
-
+            print("\nla colonna selezionata \""+columnName+"\" non è presente nel dataset\n")
+            columnNonCat =  True
     else:
         #caso di default, dove scelgo l'ultima colonna
         x_predictor = dataFrame[dataFrame.columns[:-1]]
         y_response =  dataFrame[dataFrame.columns[-1]]
-        
-    return x_predictor, y_response
+        if y_response.dtype != "category":
+            columnNonCat = True
+            print("\nla colonna selezionata \""+dataFrame.columns[-1]+"\" non è sus categorica\n")
+    return x_predictor, y_response, columnNotExist, columnNonCat
 
 
 
@@ -125,3 +132,20 @@ def Logistic_Regression_Validation(x_predictor, y_response):
  
     
     return y_predict, time
+
+def energyConsumption(operatingSystem, activation, forceCodeCarbon, name_csv ):
+    dt = 0
+    if activation:   
+        if forceCodeCarbon:
+             print("chiama CodeCarbon")
+        elif operatingSystem == "Windows":
+            VTuneSelectedDataset = datasets.index(name_csv) + 1
+            print("chiama VTune Profiler")
+            dt = esternProcess.VTuneProfilerInterface(VTuneSelectedDataset)
+        else:
+            print("chiama CodeCarbon")
+    return dt
+
+
+
+    

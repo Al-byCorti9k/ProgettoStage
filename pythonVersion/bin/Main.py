@@ -4,18 +4,21 @@ import pathlib
 #from sklearn import linear_model, model_selection 
 from sklearn.metrics import matthews_corrcoef
 import dataprocess
-import helper
+import viewer
+import esternProcess
 
-
+#TODO setta anche la possibilità di inserire la colonna target per ogni singolo
+# dataset nello scenario di scelte multiple. il comando è del tipo
+# python Main.py -i 2 3 4 -cn "pippo" "pluto" "paperino". Nota che la quarta fa il default
 
 #ottengo la lista di argomenti da linea di comando
-args = helper.parser.parse_args()
-helper.showAssociationList(args.al)
+args = viewer.parser.parse_args()
+viewer.showAssociationList(args.al)
 
 
 #gestione casistica scelta multipla dei datasets. ottengo delle liste
 #dtype_dict, name_csv = helper.multipleDatasetSelection(args.i)
-dtype_csv_dict = helper.multipleDatasetSelection(args.i)
+dtype_csv_dict = viewer.multipleDatasetSelection(args.i)
 
 for key, value in dtype_csv_dict.items():
     dtype_dict = value
@@ -24,20 +27,24 @@ for key, value in dtype_csv_dict.items():
     p = pathlib.Path(__file__)
     p_csv = pathlib.PurePath(p).parents[2].joinpath("data", name_csv)
     df = pd.read_csv(p_csv, dtype = dtype_dict)
-    helper.datasetPreview(df, name_csv)
+    viewer.datasetPreview(df, name_csv)
     #ottengo tutte le colonne
 
-    x_predictor, y_response = dataprocess.columnPredictionSelect(args.cn, df)
-
+    x_predictor, y_response, columnNotExist, columnNonCat  = dataprocess.columnPredictionSelect(args.cn, df)
+   
+   
+    if columnNotExist or columnNonCat or args.v != None:
+        continue
     y_predict, time = dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
     
+    consumptions = dataprocess.energyConsumption(esternProcess.checkOperatingSystem(), args.e, args.ec, name_csv )
 
     MCC = matthews_corrcoef(y_response, y_predict)
     t = np.sum(time["fit_time"])
     print("coefficiente MCC del classificatore: ", MCC)
     print("tempo di esecuzione di LOOCV in secondi: "+ str(t) + " s")
     print("tempo di esecuzione di LOOCV in ms: " + str(t * 1000) + " ms")
-
+    print(consumptions)
 
 
 
