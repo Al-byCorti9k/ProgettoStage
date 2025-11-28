@@ -7,6 +7,7 @@ import subprocess
 import ctypes, sys
 import platform
 import csv
+import dataprocess
 
 now = datetime.now()
 now_str = now.strftime("%Y-%m-%d_%Hh-%Mm-%Ss")
@@ -52,7 +53,7 @@ output = p.parents[1].joinpath("results",exp_csv)
     # che dovrebbe aver generato VTune Profiler esiste, aggiorna opportunamente l'exit_code
 def VTuneProfilerInterface(dataset):
 	if is_admin():
-					args = f" -i {dataset}"
+					args = f" -i {dataset} -e"
 					print("inizia la collezione dei dati, attendi qualche minuto...\n")
 					run_command(collector + args)
 					print("\n La collezione dei dati è conclusa! Inizia la conversione in formato csv...\n")
@@ -121,3 +122,13 @@ def VTuneProfilerInterface(dataset):
 def checkOperatingSystem():
     os = platform.system()
     return os
+
+from codecarbon import OfflineEmissionsTracker
+tracker = OfflineEmissionsTracker(country_iso_code="ITA")
+
+def callCodeCarbone(x_predictor, y_response):
+
+	tracker.start()
+	dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
+	tracker.stop()
+	

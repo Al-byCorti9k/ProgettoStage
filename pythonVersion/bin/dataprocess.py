@@ -8,6 +8,7 @@ from sklearn import linear_model, model_selection
 from sklearn.metrics import matthews_corrcoef
 import platform
 import esternProcess
+import time
 
 datasets = ["journal.pone.0148699_S1_Text_Sepsis_SIRS_EDITED.csv",
             "10_7717_peerj_5665_dataYM2018_neuroblastoma.csv",
@@ -98,8 +99,6 @@ preprocessor = ColumnTransformer(
     ]
 )
 
-#from codecarbon import OfflineEmissionsTracker
-#tracker = OfflineEmissionsTracker(country_iso_code="ITA")
 
  # uso la classificazione con regressione logistica e LOOCV 
 model = linear_model.LogisticRegression(max_iter = 1000)
@@ -123,27 +122,27 @@ def Logistic_Regression_Validation(x_predictor, y_response):
   #TODO capire come sistemare la stampa dei messaggi, non mi piace per niente
   # questa gestione poco trasparente e che su windows non può effettuare misure precise
   # perchè si affida completamente ad una componente deprecata 
-  #  tracker.start()
+    start = time.time()
     y_predict = model_selection.cross_val_predict(clf, x_predictor, y_response, cv = cvp )
-  #  tracker.stop()
+    end = time.time()
     
-    time = model_selection.cross_validate(clf, x_predictor, y_response, cv = cvp)
-    
+    #time = model_selection.cross_validate(clf, x_predictor, y_response, cv = cvp)
+    seconds = end - start
  
     
-    return y_predict, time
+    return y_predict, seconds
 
-def energyConsumption(operatingSystem, activation, forceCodeCarbon, name_csv ):
+def energyConsumption(operatingSystem, activation, forceCodeCarbon, name_csv, x_predictor, y_response ):
     dt = 0
     if activation:   
         if forceCodeCarbon:
-             print("chiama CodeCarbon")
+            esternProcess.callCodeCarbone(x_predictor, y_response)
         elif operatingSystem == "Windows":
             VTuneSelectedDataset = datasets.index(name_csv) + 1
             print("chiama VTune Profiler")
             dt = esternProcess.VTuneProfilerInterface(VTuneSelectedDataset)
         else:
-            print("chiama CodeCarbon")
+            esternProcess.callCodeCarbone(x_predictor, y_response)
     return dt
 
 

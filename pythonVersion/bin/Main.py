@@ -37,10 +37,12 @@ for key, value in dtype_csv_dict.items():
         continue
     y_predict, time = dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
     
-    consumptions = dataprocess.energyConsumption(esternProcess.checkOperatingSystem(), args.e, args.ec, name_csv )
+    os = esternProcess.checkOperatingSystem()
+    consumptions = dataprocess.energyConsumption(os, args.e, args.ec, name_csv, x_predictor, y_response)
 
     MCC = matthews_corrcoef(y_response, y_predict)
-    t = np.sum(time["fit_time"])
+   # t = np.sum(time["fit_time"])
+    t = time
     print("coefficiente MCC del classificatore: ", MCC)
     print("tempo di esecuzione di LOOCV in secondi: "+ str(t) + " s")
     print("tempo di esecuzione di LOOCV in ms: " + str(t * 1000) + " ms")
