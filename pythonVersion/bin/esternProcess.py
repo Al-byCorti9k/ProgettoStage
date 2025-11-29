@@ -44,45 +44,54 @@ def is_admin():
     except:
         return False
 
-flag =pathlib.Path(__file__).parent / "child_done.flag"
-time = pathlib.Path(__file__).parent / "time_time.flag"
+
+# funzione che pulisce le cartelle e i file creati da VTune Profiler
+import shutil
+def cleaner(path):
+	folder = path
+	for item in folder.iterdir():
+		# se il nome **non inizia per 'result'**
+		if not item.name.startswith("result"):
+			if item.is_file() or item.is_symlink():
+				item.unlink()  # cancella file o symlink
+			elif item.is_dir():
+				shutil.rmtree(item)  # cancella cartelle ricorsivamente
+
+flag =p.parent / "child_done.flag"
+time = p.parent / "time_time.flag"
 output = p.parents[1].joinpath("results",exp_csv)
 
 
-    # viene controllato se si è admin e si eseguono i comandi. Poi se output, cioè il report csv 
-    # che dovrebbe aver generato VTune Profiler esiste, aggiorna opportunamente l'exit_code
+def newProcessCommands(dataset):
+	args = f" -i {dataset} -e"
+	print("inizia la collezione dei dati, attendi qualche minuto...\n")
+	run_command(collector + args)
+	print("\n La collezione dei dati è conclusa! Inizia la conversione in formato csv...\n")
+	run_command(converter_to_csv)
+
+	if output.exists():
+					exit_code = 0
+	else:
+					exit_code = 1
+# vengono scritti due file, che serviranno al processo padre per verificare lo status del figlio. Purtroppo Windows non permette con shell32.shellExcuteW
+# le normali gestioni dei processi padre/figlio come si potrebbe fare su Linux. Questo è il modo più semplice che ho trovato.
+	flag.write_text(str(exit_code))
+	time.write_text(str(now_str))
+	
+	sys.exit(exit_code)
+
+
+# si interfaccia a Vtune Profiler e restituisce il consumo energetico in mJ
 def VTuneProfilerInterface(dataset):
 	if is_admin():
-					args = f" -i {dataset} -e"
-					print("inizia la collezione dei dati, attendi qualche minuto...\n")
-					run_command(collector + args)
-					print("\n La collezione dei dati è conclusa! Inizia la conversione in formato csv...\n")
-					run_command(converter_to_csv)
+					newProcessCommands(dataset)
 
-					if output.exists():
-									exit_code = 0
-					else:
-									exit_code = 1
-					
-					# vengono scritti due file, che serviranno al processo padre per verificare 
-					# lo status del figlio. Purtroppo Windows non permette con shell32.shellExcuteW
-					# le normali gestioni dei processi padre/figlio come si potrebbe fare su Linux.
-					# Questo è il modo più semplice che ho trovato.
-
-					flag.write_text(str(exit_code))
-					time.write_text(str(now_str))
-					
-					sys.exit(exit_code)
 	else:
-					# deve rilanciare il programma: lo rilancia senza i permessi da admin
-					#script_path = pathlib.PurePath(p).parents[1].joinpath("results", "Main.py")
-					#args = f'"{script_path}" -i "{dataset}"'
-					print("ciao prova")
-					ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
-					#ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+# deve rilanciare il programma: lo rilancia senza i permessi da admin
+			ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
 
-	# quando il processo padre chiama il "figlio" si mette in attesa finchè i report flag e time
-	# non vengono generati. Si occupa di controllarne lo status
+# quando il processo padre chiama il "figlio" si mette in attesa finchè i report flag e time
+# non vengono generati. Si occupa di controllarne lo status
 	while True:
 					if flag.exists():
 									exit_code = int(flag.read_text())
@@ -90,32 +99,28 @@ def VTuneProfilerInterface(dataset):
 									flag.unlink()
 
 									break
-
-
-	
-	# precedentemente abbiamo creato due file, time e flag. Il primo per memorizzare il momento dell'esecuzione
-	# dell'esperimento, il secondo per memorizzare l'esito.
-	# Questa sezione usa time per poter risalire al file csv creato dai comandi VTune Profiler sopra
-	# per poter poi risalire all'informazione del consumo energetico
+# precedentemente abbiamo creato due file, time e flag. Il primo per memorizzare il momento dell'esecuzione
+# dell'esperimento, il secondo per memorizzare l'esito. Questa sezione usa time per poter risalire al file csv creato dai comandi VTune Profiler sopra
+# per poter poi risalire all'informazione del consumo energetico
 	energyConsumption = []
 	if time.exists():
 					text = time.read_text()
 					time.unlink()
 	f_csv = pathlib.PurePath(p).parents[1].joinpath("results",f"experiment_{text}.csv")
-
 	# viene aperto il file csv e si controlla riga per riga se vi è presente il termine "Package_0"
-	# Soluzione poco elegante, ma VTune Profiler genera sempre in questo modo i csv, e dato che il 
-	# formato non è facilmente importabile in un dataframe Pandas, sembra essere la soluzione più veloce
 	with open(f_csv,'rt') as f:
 					data = csv.reader(f)
 					for row in data:
-									if any("Package_0" in cell for cell in row):
+								if any("Package_0" in cell for cell in row):
 										energyConsumption.append(row)
-										
-
-	print(f"il consumo energetico in mJ è: {energyConsumption[1][2]} mJ")
+	cleaner(p.parents[1] / "results")									
 	print("fine del programma!!")
 	return energyConsumption[1][2]
+
+
+
+
+
 
 
 # funzione che controlla il sistema operativo su cui si sta eseguendo il codice
@@ -123,11 +128,16 @@ def checkOperatingSystem():
     os = platform.system()
     return os
 
+
 from codecarbon import OfflineEmissionsTracker
-tracker = OfflineEmissionsTracker(country_iso_code="ITA")
-
+#funzione che chiama il tracker del modulo CodeCarbon
 def callCodeCarbone(x_predictor, y_response):
-
+	tracker = OfflineEmissionsTracker(country_iso_code="ITA",
+								  output_dir = p.parents[1] / "results",
+								  measure_power_secs = 1,
+								  tracking_mode = "process",
+								   on_csv_write = "append"
+									)
 	tracker.start()
 	dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
 	tracker.stop()

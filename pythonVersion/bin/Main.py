@@ -7,9 +7,7 @@ import dataprocess
 import viewer
 import esternProcess
 
-#TODO setta anche la possibilità di inserire la colonna target per ogni singolo
-# dataset nello scenario di scelte multiple. il comando è del tipo
-# python Main.py -i 2 3 4 -cn "pippo" "pluto" "paperino". Nota che la quarta fa il default
+
 
 #ottengo la lista di argomenti da linea di comando
 args = viewer.parser.parse_args()
@@ -47,26 +45,8 @@ for key, value in dtype_csv_dict.items():
     print("tempo di esecuzione di LOOCV in secondi: "+ str(t) + " s")
     print("tempo di esecuzione di LOOCV in ms: " + str(t * 1000) + " ms")
     if consumptions != 0:
-        print(consumptions)
+        print(f"il consumo energetico in mJ è: {consumptions} mJ")
 
 
 
-'''
-    # uso la classificazione con regressione logistica e LOOCV 
-    model = linear_model.LogisticRegression(max_iter = 1000)
-    cvp = model_selection.LeaveOneOut()
 
-    # preprocessare i dati è fondamentale per rendere comparabili i valori 
-    # categorici con quelli numerici, i quali a loro volta vengono scalati 
-    # per permettere un confronto adeguato
-
-    # creo una pipeline che effettua il preprocessing e poi applica il modello
-    clf = dataprocess.make_pipeline(dataprocess.preprocessor, model)
-
-    # viene effettuata la LOOCV predittiva, in modo da ottenere 
-    # le previsioni di ciascun fold, per poi valutare la prestazione
-    # del modello con la metrica MCC
-
-    y_predict = model_selection.cross_val_predict(clf, x_predictor, y_response, cv = cvp )
-    time = model_selection.cross_validate(clf, x_predictor, y_response, cv = cvp)
-'''

@@ -47,25 +47,44 @@ def datasetsSelection(selectedDataset):
     return dtype_dict, name_csv
 
 
+
+# Funzione per la gestione della scelta di colonne multiple per dataset multipli. il comando è del tipo
+# python Main.py -i 1 2 3 4 -cn "pippo" "pluto" "paperino". Nota che la quarta fa il default
+class staticLen:
+    len = 0   
+def columnPredictionIndexExtractor(columnName):
+    if columnName != None:
+        if staticLen.len >= len(columnName):
+            columnIndex = -1
+        else:
+            columnIndex = staticLen.len
+            staticLen.len += 1
+    else:
+        columnIndex = -1
+    
+    return columnIndex
+     
+
 #funzione che ritorna i dataframe divisi in gruppo da predirre e 
 #gruppo da usare per la predizione.
 def columnPredictionSelect(columnName, dataFrame ):
+    columnIndex = columnPredictionIndexExtractor(columnName)
     columnNotExist = False
     columnNonCat = False
     x_predictor = None
     y_response = None
     #controllo se esiste la colonna selezionata ed è di tipo category
-    if columnName != None:
+    if columnName != None and columnIndex != -1:
         
-        if columnName in dataFrame.columns.tolist():
-            if dataFrame[columnName].dtype == "category":
-                x_predictor = dataFrame.drop(columnName, axis=1)
-                y_response = dataFrame[columnName]
+        if columnName[columnIndex] in dataFrame.columns.tolist():
+            if dataFrame[columnName[columnIndex]].dtype == "category":
+                x_predictor = dataFrame.drop(columnName[columnIndex], axis=1)
+                y_response = dataFrame[columnName[columnIndex]]
             else:
-                print("\nla colonna selezionata \""+columnName+"\" non è categorica\n")
+                print("\nla colonna selezionata \""+columnName[columnIndex]+"\" non è categorica\n")
                 columnNotExist = True
         else:
-            print("\nla colonna selezionata \""+columnName+"\" non è presente nel dataset\n")
+            print("\nla colonna selezionata \""+columnName[columnIndex]+"\" non è presente nel dataset\n")
             columnNonCat =  True
     else:
         #caso di default, dove scelgo l'ultima colonna
