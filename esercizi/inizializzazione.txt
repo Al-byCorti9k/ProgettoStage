@@ -1,0 +1,3 @@
+modprobe intel_rapl_common # or intel_rapl for kernels < 5
+https://github.com/Al-byCorti9k/ProgettoStage.git
+installa git e crea la repository
