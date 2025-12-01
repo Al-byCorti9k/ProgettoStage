@@ -164,6 +164,37 @@ def energyConsumption(operatingSystem, activation, forceCodeCarbon, name_csv, x_
             esternProcess.callCodeCarbone(x_predictor, y_response)
     return dt
 
+import pandas as pd
+
+data = {'Dataset': [],
+            "Operating system": [],
+            "LOOCV's time execusion (s)": [],
+            "LOOCV's time execution (ms)": [],
+            "energy consumption (kWh)": []
+            }
+dfCSV = pd.DataFrame(data)
 
 
+def mJtoKwh(energyInMilliJoule):
+    return  energyConsumption / (3.6 * (10**9))
+
+def addRowToCSV(MCC, time, consumptions, os, EnergyEnable, name_csv):
     
+    if not(EnergyEnable):
+        consumptions = 0
+
+    new_row = {'Dataset': [name_csv],
+            "Operating system": [os],
+            "LOOCV's time execusion (s)": [time],
+            "LOOCV's time execution (ms)": [time * 1000],
+            "energy consumption (kWh)": [mJtoKwh(consumptions)]
+            }
+    dfCSV.iloc[len(new_row)]
+
+import esternProcess
+
+def createCSV(savePath):
+
+    if savePath == None:
+        dfCSV.to_csv(f"{esternProcess.path}/results/result_{esternProcess.now_str}.csv")
+

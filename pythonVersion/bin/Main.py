@@ -39,13 +39,13 @@ for key, value in dtype_csv_dict.items():
     consumptions = dataprocess.energyConsumption(os, args.e, args.ec, name_csv, x_predictor, y_response)
 
     MCC = matthews_corrcoef(y_response, y_predict)
-   # t = np.sum(time["fit_time"])
-    t = time
-    print("coefficiente MCC del classificatore: ", MCC)
-    print("tempo di esecuzione di LOOCV in secondi: "+ str(t) + " s")
-    print("tempo di esecuzione di LOOCV in ms: " + str(t * 1000) + " ms")
-    if consumptions != 0:
-        print(f"il consumo energetico in mJ è: {consumptions} mJ")
+    
+
+    dataprocess.addRowToCSV(MCC, time, consumptions, os, args.e, name_csv)
+
+
+dataprocess.createCSV()   
+viewer.visualizeResults()
 
 
 

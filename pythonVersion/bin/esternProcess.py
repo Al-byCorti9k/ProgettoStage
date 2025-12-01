@@ -115,7 +115,12 @@ def VTuneProfilerInterface(dataset):
 										energyConsumption.append(row)
 	cleaner(p.parents[1] / "results")									
 	print("fine del programma!!")
-	return energyConsumption[1][2]
+	try:
+		stimatedEnergy = energyConsumption[1][2]
+	except IndexError:
+		print("VTune Profiler non è riuscito ad ottenere i consumi energetici")
+		stimatedEnergy = 0
+	return stimatedEnergy
 
 
 

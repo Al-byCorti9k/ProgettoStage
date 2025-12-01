@@ -37,6 +37,7 @@ parser.add_argument('-e', action = 'store_false', help = "deactivate computation
 parser.add_argument('-ec', action="store_true", help = "force computation of energy consumption with codeCarbon. Default False")
 parser.add_argument('-b', action = 'store_false', help = "deactivate computation of the MCC")
 parser.add_argument('-v', action = 'store_true', help = "visualize a preview of selected datasets" )
+#parser.add_argument('-r', action = 'store_true', help = "Select saving path of results. Default is .pythonVersion\results")
 
 # classe che enumera tutti i dataset disponibili
 class Dataset(Enum):
@@ -92,3 +93,8 @@ def datasetPreview(dataset, name_csv):
     print("\n")
 
 
+def visualizeResults():
+    
+    print("\n\n\n")
+    print(dataprocess.dfCSV)
+    print("\n\n\n")
