@@ -8,6 +8,7 @@ import ctypes, sys
 import platform
 import csv
 import dataprocess
+import pandas as pd
 
 now = datetime.now()
 now_str = now.strftime("%Y-%m-%d_%Hh-%Mm-%Ss")
@@ -117,7 +118,7 @@ def VTuneProfilerInterface(dataset):
 	print("fine del programma!!")
 	try:
 		stimatedEnergy = energyConsumption[1][2]
-	except IndexError:
+	except Exception:
 		print("VTune Profiler non è riuscito ad ottenere i consumi energetici")
 		stimatedEnergy = 0
 	return stimatedEnergy
@@ -136,6 +137,10 @@ def checkOperatingSystem():
 
 from codecarbon import OfflineEmissionsTracker
 #funzione che chiama il tracker del modulo CodeCarbon
+
+
+indice = 0
+
 def callCodeCarbone(x_predictor, y_response):
 	tracker = OfflineEmissionsTracker(country_iso_code="ITA",
 								  output_dir = p.parents[1] / "results",
@@ -146,4 +151,10 @@ def callCodeCarbone(x_predictor, y_response):
 	tracker.start()
 	dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
 	tracker.stop()
+
+	df = pd.read_csv(f"{p.parents[1]}/results/emissions.csv")
+
+	dt = df['cpu_energy'][indice]
 	
+	cleaner(p.parents[1] / "results")	
+	return dt

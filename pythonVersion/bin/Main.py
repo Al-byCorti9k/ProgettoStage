@@ -41,10 +41,10 @@ for key, value in dtype_csv_dict.items():
     MCC = matthews_corrcoef(y_response, y_predict)
     
 
-    dataprocess.addRowToCSV(MCC, time, consumptions, os, args.e, name_csv)
+    dataprocess.addRowToCSV(MCC, time, consumptions, os, args.e, name_csv, args.ec)
 
 
-dataprocess.createCSV()   
+dataprocess.createCSV(args.r)   
 viewer.visualizeResults()
 
 

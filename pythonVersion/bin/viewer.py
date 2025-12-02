@@ -28,8 +28,8 @@ parser.add_argument('-i', nargs = '+',
                     help = "choose datasets based on association list", type = int)
 parser.add_argument('-al', action = 'store_true', 
                     help = "shows the association list and exit")
-parser.add_argument('-od', nargs ='?', 
-                    help = "select the saving path of results. Defult is file directory")
+parser.add_argument('-r', nargs ='?', 
+                    help = "select the saving path of results. Defult .pythonVersion\results")
 parser.add_argument('-cn', nargs = '*', 
                     help = "select the name of the categorical column to predict. E.G: python Main.py -i 2 3 column2 column3. Default is the last column")
 parser.add_argument('-t', action = 'store_false', help = "deactivate computation of LOOCV's time")
@@ -37,7 +37,7 @@ parser.add_argument('-e', action = 'store_false', help = "deactivate computation
 parser.add_argument('-ec', action="store_true", help = "force computation of energy consumption with codeCarbon. Default False")
 parser.add_argument('-b', action = 'store_false', help = "deactivate computation of the MCC")
 parser.add_argument('-v', action = 'store_true', help = "visualize a preview of selected datasets" )
-#parser.add_argument('-r', action = 'store_true', help = "Select saving path of results. Default is .pythonVersion\results")
+
 
 # classe che enumera tutti i dataset disponibili
 class Dataset(Enum):

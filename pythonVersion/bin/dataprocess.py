@@ -155,46 +155,61 @@ def energyConsumption(operatingSystem, activation, forceCodeCarbon, name_csv, x_
     dt = 0
     if activation:   
         if forceCodeCarbon:
-            esternProcess.callCodeCarbone(x_predictor, y_response)
+            dt = esternProcess.callCodeCarbone(x_predictor, y_response)
         elif operatingSystem == "Windows":
             VTuneSelectedDataset = datasets.index(name_csv) + 1
             print("chiama VTune Profiler")
             dt = esternProcess.VTuneProfilerInterface(VTuneSelectedDataset)
         else:
-            esternProcess.callCodeCarbone(x_predictor, y_response)
+            dt = esternProcess.callCodeCarbone(x_predictor, y_response)
     return dt
 
 import pandas as pd
 
-data = {'Dataset': [],
-            "Operating system": [],
-            "LOOCV's time execusion (s)": [],
-            "LOOCV's time execution (ms)": [],
-            "energy consumption (kWh)": []
+data = {'Dataset                                   ': [],
+        "Operating system": [],
+        "LOOCV's time execusion (s)": [],
+        "LOOCV's time execution (ms)": [],
+        "energy consumption (kWh)": [],
+        "methodology": []
             }
 dfCSV = pd.DataFrame(data)
 
 
 def mJtoKwh(energyInMilliJoule):
-    return  energyConsumption / (3.6 * (10**9))
+    return  (float(energyInMilliJoule) / (3.6 *10**9))
 
-def addRowToCSV(MCC, time, consumptions, os, EnergyEnable, name_csv):
+def addRowToCSV(MCC, time, consumptions, os, EnergyEnable, name_csv, forced):
     
     if not(EnergyEnable):
         consumptions = 0
+        method = None
+    if os == "Windows" and not(forced):
+        method = "VTune Profiler"
+    elif os =="Windows" and forced:
+        method = "CodeCarbon APROX"
+    else:
+        method = "CodeCarbon RALP"
+        
 
-    new_row = {'Dataset': [name_csv],
-            "Operating system": [os],
-            "LOOCV's time execusion (s)": [time],
-            "LOOCV's time execution (ms)": [time * 1000],
-            "energy consumption (kWh)": [mJtoKwh(consumptions)]
-            }
-    dfCSV.iloc[len(new_row)]
 
-import esternProcess
+    mt = time * 1000
+    kwt = mJtoKwh(consumptions)
+    new_row = [ name_csv, os, time, mt, kwt, method ]
+           
+    dfCSV.loc[dfCSV.shape[0]] = new_row
+
+import pathlib, time
+from datetime import datetime
+
+p = pathlib.Path(__file__)
+now = datetime.now()
+now_str = now.strftime("%Y-%m-%d_%Hh-%Mm-%Ss")
 
 def createCSV(savePath):
 
     if savePath == None:
-        dfCSV.to_csv(f"{esternProcess.path}/results/result_{esternProcess.now_str}.csv")
-
+        dfCSV.to_csv(f"{pathlib.PurePath(p).parents[1]}/results/result_{esternProcess.now_str}.csv")
+    else:
+        dfCSV.to_csv(savePath)
+        
