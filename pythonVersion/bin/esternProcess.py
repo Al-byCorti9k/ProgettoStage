@@ -10,10 +10,10 @@ import csv
 import dataprocess
 import pandas as pd
 
+
+
 now = datetime.now()
 now_str = now.strftime("%Y-%m-%d_%Hh-%Mm-%Ss")
-
-
 
 p = pathlib.Path(__file__)
 p_csv = pathlib.PurePath(p).parents[1].joinpath("results",now_str)
@@ -58,11 +58,13 @@ def cleaner(path):
 			elif item.is_dir():
 				shutil.rmtree(item)  # cancella cartelle ricorsivamente
 
+
+
 flag =p.parent / "child_done.flag"
 time = p.parent / "time_time.flag"
 output = p.parents[1].joinpath("results",exp_csv)
 
-
+# comandi a Intel VTune Profiler
 def newProcessCommands(dataset):
 	args = f" -i {dataset} -e"
 	print("inizia la collezione dei dati, attendi qualche minuto...\n")
@@ -74,21 +76,36 @@ def newProcessCommands(dataset):
 					exit_code = 0
 	else:
 					exit_code = 1
-# vengono scritti due file, che serviranno al processo padre per verificare lo status del figlio. Purtroppo Windows non permette con shell32.shellExcuteW
-# le normali gestioni dei processi padre/figlio come si potrebbe fare su Linux. Questo è il modo più semplice che ho trovato.
+# vengono scritti due file, che serviranno al processo padre per verificare lo status del figlio. 
+# Purtroppo Windows non permette con shell32.shellExcuteW le normali gestioni dei processi padre/figlio come si potrebbe fare su Linux.
+# Questo è il modo più semplice che ho trovato.
 	flag.write_text(str(exit_code))
 	time.write_text(str(now_str))
 	
 	sys.exit(exit_code)
 
 
-# si interfaccia a Vtune Profiler e restituisce il consumo energetico in mJ
+# funzione che ottiene dal CSV il dato del consumo energetico
+def getEnergyFromCSV(f_csv):
+	energyConsumption = []
+	# viene aperto il file csv e si controlla riga per riga se vi è presente il termine "Package_0"
+	with open(f_csv,'rt') as f:
+					data = csv.reader(f)
+					for row in data:
+								if any("Package_0" in cell for cell in row):
+										energyConsumption.append(row)
+	cleaner(p.parents[1] / "results")	
+	return energyConsumption
+
+
+
+
+# Si interfaccia a Vtune Profiler e restituisce il consumo energetico in mJ
 def VTuneProfilerInterface(dataset):
 	if is_admin():
 					newProcessCommands(dataset)
-
 	else:
-# deve rilanciare il programma: lo rilancia senza i permessi da admin
+# rilancia il programma in una shell con i permessi di admin
 			ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
 
 # quando il processo padre chiama il "figlio" si mette in attesa finchè i report flag e time
@@ -101,21 +118,14 @@ def VTuneProfilerInterface(dataset):
 
 									break
 # precedentemente abbiamo creato due file, time e flag. Il primo per memorizzare il momento dell'esecuzione
-# dell'esperimento, il secondo per memorizzare l'esito. Questa sezione usa time per poter risalire al file csv creato dai comandi VTune Profiler sopra
-# per poter poi risalire all'informazione del consumo energetico
-	energyConsumption = []
+# dell'esperimento, il secondo per memorizzare l'esito.
+	
 	if time.exists():
 					text = time.read_text()
 					time.unlink()
 	f_csv = pathlib.PurePath(p).parents[1].joinpath("results",f"experiment_{text}.csv")
-	# viene aperto il file csv e si controlla riga per riga se vi è presente il termine "Package_0"
-	with open(f_csv,'rt') as f:
-					data = csv.reader(f)
-					for row in data:
-								if any("Package_0" in cell for cell in row):
-										energyConsumption.append(row)
-	cleaner(p.parents[1] / "results")									
-	print("fine del programma!!")
+
+	energyConsumption = getEnergyFromCSV(f_csv)
 	try:
 		stimatedEnergy = energyConsumption[1][2]
 	except Exception:
@@ -124,15 +134,14 @@ def VTuneProfilerInterface(dataset):
 	return stimatedEnergy
 
 
-
-
-
-
-
 # funzione che controlla il sistema operativo su cui si sta eseguendo il codice
 def checkOperatingSystem():
     os = platform.system()
     return os
+
+
+
+
 
 
 from codecarbon import OfflineEmissionsTracker

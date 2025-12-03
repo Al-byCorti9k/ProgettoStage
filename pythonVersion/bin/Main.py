@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import pathlib
-#from sklearn import linear_model, model_selection 
 from sklearn.metrics import matthews_corrcoef
 import dataprocess
 import viewer
@@ -30,7 +29,8 @@ for key, value in dtype_csv_dict.items():
 
     x_predictor, y_response, columnNotExist, columnNonCat  = dataprocess.columnPredictionSelect(args.cn, df)
    
-   
+   # Se l'utente ha selezionato una colonna non esistente, non categorica oppure
+   # è stata selezionata la modalità visualizzazione, si procede nell'iterazione
     if columnNotExist or columnNonCat or args.v :
         continue
     y_predict, time = dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
@@ -43,9 +43,9 @@ for key, value in dtype_csv_dict.items():
 
     dataprocess.addRowToCSV(MCC, time, consumptions, os, args.e, name_csv, args.ec)
 
-
+# Stampa e salvataggio dei risultati
 dataprocess.createCSV(args.r)   
-viewer.visualizeResults()
+viewer.visualizeResults(args.v)
 
 
 

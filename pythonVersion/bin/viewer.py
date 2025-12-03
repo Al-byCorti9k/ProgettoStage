@@ -93,8 +93,8 @@ def datasetPreview(dataset, name_csv):
     print("\n")
 
 
-def visualizeResults():
-    
-    print("\n\n\n")
-    print(dataprocess.dfCSV)
-    print("\n\n\n")
+def visualizeResults(view):
+    if not view:
+        print("\n\n\n")
+        print(dataprocess.dfCSV)
+        print("\n\n\n")

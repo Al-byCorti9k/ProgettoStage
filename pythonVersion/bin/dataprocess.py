@@ -1,5 +1,6 @@
 #le funzioni implementano un preprocessing per ciascuno dei dataset
 # serve per distinguere i dati categorici da quelli che non lo sono
+
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
@@ -9,6 +10,7 @@ from sklearn.metrics import matthews_corrcoef
 import platform
 import esternProcess
 import time
+import pandas as pd
 
 datasets = ["journal.pone.0148699_S1_Text_Sepsis_SIRS_EDITED.csv",
             "10_7717_peerj_5665_dataYM2018_neuroblastoma.csv",
@@ -73,6 +75,7 @@ def columnPredictionSelect(columnName, dataFrame ):
     columnNonCat = False
     x_predictor = None
     y_response = None
+
     #controllo se esiste la colonna selezionata ed è di tipo category
     if columnName != None and columnIndex != -1:
         
@@ -97,7 +100,7 @@ def columnPredictionSelect(columnName, dataFrame ):
 
 
 
-#funzionalità per il preprocessing del dataframe
+# Funzionalità per il preprocessing del dataframe
 numeric_trasformer = Pipeline(steps =
                               [ 
                             ('mean', SimpleImputer(strategy="mean")),
@@ -119,7 +122,7 @@ preprocessor = ColumnTransformer(
 )
 
 
- # uso la classificazione con regressione logistica e LOOCV 
+# Uso la classificazione con regressione logistica e LOOCV 
 model = linear_model.LogisticRegression(max_iter = 1000)
 cvp = model_selection.LeaveOneOut()
 
@@ -133,24 +136,19 @@ clf = make_pipeline(preprocessor, model)
 # viene effettuata la LOOCV predittiva, in modo da ottenere 
 # le previsioni di ciascun fold, per poi valutare la prestazione
 # del modello con la metrica MCC
-
-
 def Logistic_Regression_Validation(x_predictor, y_response):
    
-
-  #TODO capire come sistemare la stampa dei messaggi, non mi piace per niente
-  # questa gestione poco trasparente e che su windows non può effettuare misure precise
-  # perchè si affida completamente ad una componente deprecata 
     start = time.time()
     y_predict = model_selection.cross_val_predict(clf, x_predictor, y_response, cv = cvp )
     end = time.time()
     
-    #time = model_selection.cross_validate(clf, x_predictor, y_response, cv = cvp)
     seconds = end - start
  
-    
     return y_predict, seconds
 
+
+# funzione che permette di scegliere il metodo di calcolo dei consumi energetici. Su linux è imperativo 
+# codeCarbon, su windows si può effettuare una scelta tra CodeCarbon e Intel VTune Profiler
 def energyConsumption(operatingSystem, activation, forceCodeCarbon, name_csv, x_predictor, y_response ):
     dt = 0
     if activation:   
@@ -164,9 +162,9 @@ def energyConsumption(operatingSystem, activation, forceCodeCarbon, name_csv, x_
             dt = esternProcess.callCodeCarbone(x_predictor, y_response)
     return dt
 
-import pandas as pd
 
-data = {'Dataset                                   ': [],
+# creo un dataframe pandas per gestire la generazione del file CSV dei risultati
+data = {'Dataset': [],
         "Operating system": [],
         "LOOCV's time execusion (s)": [],
         "LOOCV's time execution (ms)": [],
@@ -175,10 +173,12 @@ data = {'Dataset                                   ': [],
             }
 dfCSV = pd.DataFrame(data)
 
-
+# Funzione che converte l'energia dai mJ ai kWh. Necessaria dato che Intel VTune Profiler
+# restituisce il dato dei consumi energetici solo in mJ
 def mJtoKwh(energyInMilliJoule):
     return  (float(energyInMilliJoule) / (3.6 *10**9))
 
+# Aggiunge una riga al dataframe pandas con i risultati dell'iterazione attuale
 def addRowToCSV(MCC, time, consumptions, os, EnergyEnable, name_csv, forced):
     
     if not(EnergyEnable):
@@ -191,13 +191,13 @@ def addRowToCSV(MCC, time, consumptions, os, EnergyEnable, name_csv, forced):
     else:
         method = "CodeCarbon RALP"
         
-
-
     mt = time * 1000
     kwt = mJtoKwh(consumptions)
     new_row = [ name_csv, os, time, mt, kwt, method ]
            
     dfCSV.loc[dfCSV.shape[0]] = new_row
+
+
 
 import pathlib, time
 from datetime import datetime
@@ -206,6 +206,7 @@ p = pathlib.Path(__file__)
 now = datetime.now()
 now_str = now.strftime("%Y-%m-%d_%Hh-%Mm-%Ss")
 
+# Questa funzione crea il CSV finale con tutti i risultati dei calcoli effettuati sui dataset selezionati dall'utente
 def createCSV(savePath):
 
     if savePath == None:
