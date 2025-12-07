@@ -1,16 +1,20 @@
 #le funzioni implementano un preprocessing per ciascuno dei dataset
 # serve per distinguere i dati categorici da quelli che non lo sono
 
+import platform
+import time
+import pathlib
+from datetime import datetime
+
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer, make_column_selector as selector
 from sklearn import linear_model, model_selection 
 from sklearn.metrics import matthews_corrcoef
-import platform
-import esternProcess
-import time
 import pandas as pd
+
+import esternProcess
 
 datasets = ["journal.pone.0148699_S1_Text_Sepsis_SIRS_EDITED.csv",
             "10_7717_peerj_5665_dataYM2018_neuroblastoma.csv",
@@ -157,10 +161,12 @@ def energyConsumption(operatingSystem, activation, forceCodeCarbon, name_csv, x_
         elif operatingSystem == "Windows":
             VTuneSelectedDataset = datasets.index(name_csv) + 1
             print("chiama VTune Profiler")
+            #print(f"VTune dataset selected: {VTuneSelectedDataset}")
             dt = esternProcess.VTuneProfilerInterface(VTuneSelectedDataset)
         else:
             dt = esternProcess.callCodeCarbone(x_predictor, y_response)
     return dt
+
 
 
 # creo un dataframe pandas per gestire la generazione del file CSV dei risultati
@@ -173,23 +179,29 @@ data = {'Dataset': [],
             }
 dfCSV = pd.DataFrame(data)
 
+
+
 # Funzione che converte l'energia dai mJ ai kWh. Necessaria dato che Intel VTune Profiler
 # restituisce il dato dei consumi energetici solo in mJ
 def mJtoKwh(energyInMilliJoule):
     return  (float(energyInMilliJoule) / (3.6 *10**9))
+
+
+
 
 # Aggiunge una riga al dataframe pandas con i risultati dell'iterazione attuale
 def addRowToCSV(MCC, time, consumptions, os, EnergyEnable, name_csv, forced):
     
     if not(EnergyEnable):
         consumptions = 0
-        method = None
-    if os == "Windows" and not(forced):
-        method = "VTune Profiler"
-    elif os =="Windows" and forced:
-        method = "CodeCarbon APROX"
+        method = "None"
     else:
-        method = "CodeCarbon RALP"
+        if os == "Windows" and not(forced):
+            method = "VTune Profiler"
+        elif os =="Windows" and forced:
+            method = "CodeCarbon APROX"
+        else:
+            method = "CodeCarbon RALP"
         
     mt = time * 1000
     kwt = mJtoKwh(consumptions)
@@ -199,8 +211,7 @@ def addRowToCSV(MCC, time, consumptions, os, EnergyEnable, name_csv, forced):
 
 
 
-import pathlib, time
-from datetime import datetime
+
 
 p = pathlib.Path(__file__)
 now = datetime.now()
@@ -214,3 +225,7 @@ def createCSV(savePath):
     else:
         dfCSV.to_csv(savePath)
         
+def createTXT():
+    file_path = f"{pathlib.PurePath(p).parents[1]}/results/figlio_{now_str}.txt"
+    with open(file_path, "w") as f:
+        f.write("Ciao, questo è un file di testo del figlio!\n")

@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import pathlib
 from sklearn.metrics import matthews_corrcoef
+import sys 
+import time
 import dataprocess
 import viewer
 import esternProcess
@@ -11,7 +13,6 @@ import esternProcess
 #ottengo la lista di argomenti da linea di comando
 args = viewer.parser.parse_args()
 viewer.showAssociationList(args.al)
-
 
 #gestione casistica scelta multipla dei datasets. ottengo delle liste
 #dtype_dict, name_csv = helper.multipleDatasetSelection(args.i)
@@ -33,20 +34,21 @@ for key, value in dtype_csv_dict.items():
    # è stata selezionata la modalità visualizzazione, si procede nell'iterazione
     if columnNotExist or columnNonCat or args.v :
         continue
-    y_predict, time = dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
+    y_predict, times = dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
     
+
     os = esternProcess.checkOperatingSystem()
     consumptions = dataprocess.energyConsumption(os, args.e, args.ec, name_csv, x_predictor, y_response)
 
     MCC = matthews_corrcoef(y_response, y_predict)
     
 
-    dataprocess.addRowToCSV(MCC, time, consumptions, os, args.e, name_csv, args.ec)
+    dataprocess.addRowToCSV(MCC, times, consumptions, os, args.e, name_csv, args.ec)
 
 # Stampa e salvataggio dei risultati
-dataprocess.createCSV(args.r)   
-viewer.visualizeResults(args.v)
-
-
+if not args.elevated and not args.v:
+  
+    dataprocess.createCSV(args.r)   
+    viewer.visualizeResults(args.v)
 
 

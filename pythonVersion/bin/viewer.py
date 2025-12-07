@@ -1,11 +1,14 @@
 #implementazione della personalizzazione degli output
 #da linea di comando.
+
 import argparse
 from enum import Enum
-import dataprocess
-import logging
+# import logging
+
 import pandas as pd
 from IPython.display import display
+
+import dataprocess
 
 #messaggi di epilogo e descrizione del programma passati al parser
 epilog_message = ("A typical usage involves listing the" 
@@ -37,7 +40,7 @@ parser.add_argument('-e', action = 'store_false', help = "deactivate computation
 parser.add_argument('-ec', action="store_true", help = "force computation of energy consumption with codeCarbon. Default False")
 parser.add_argument('-b', action = 'store_false', help = "deactivate computation of the MCC")
 parser.add_argument('-v', action = 'store_true', help = "visualize a preview of selected datasets" )
-
+parser.add_argument('--elevated', action = 'store_true', help = argparse.SUPPRESS)
 
 # classe che enumera tutti i dataset disponibili
 class Dataset(Enum):
