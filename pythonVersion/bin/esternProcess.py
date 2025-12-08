@@ -24,7 +24,6 @@ p_csv = pathlib.PurePath(p).parents[1].joinpath("results",now_str)
 exp_csv = f"experiment_{now_str}.csv"
 f_csv = pathlib.PurePath(p).parents[1].joinpath("results",exp_csv)
 main_path = pathlib.PurePath(p).parents[1] / "bin"
-python_path = rf"C:\Users\utente\AppData\Local\Programs\Python\Python314\python.exe"
 cmd_path = rf"call C:\Users\utente\miniconda3\condabin\conda.bat activate stageENV"
 result_path = rf"..\results\experiment_{now_str}"
 collector = rf"{cmd_path} && vtune -collect system-overview -no-analyze-system -r {p_csv} -knob analyze-power-usage=true -- python Main.py"
@@ -33,15 +32,19 @@ converter_to_csv = rf"vtune -report summary -result-dir {p_csv} -report-output {
 # questa funzione serve a lanciare i comandi sulla shell con i permessi elevati. E' con 
 # questa funzione che interagiremo con VTune Profiler attraverso i suoi comandi CLI
 def run_command(cmd):
-    process = subprocess.Popen(
-         cmd,
-         shell = True,
-         stdout = subprocess.PIPE,
-         stderr = subprocess.PIPE,
-         universal_newlines=True,
-         cwd = main_path
-         )
-    return process.communicate() 
+	process=subprocess.Popen(
+	cmd,
+	shell = True,
+	stdout = subprocess.PIPE,
+	stderr = subprocess.PIPE,
+	universal_newlines = True,
+	cwd = main_path
+	)
+	
+	return process.communicate()
+
+	
+	
     
 # questa funzione verifica se l'utente ha i permessi di admin. In caso contrario, rilancia il programma
 # da capo con i permessi elevati.
@@ -73,11 +76,13 @@ errors = p.parents[1].joinpath("spazzatura",f"spazzatura{now_str}.txt")
 uscite = p.parents[1].joinpath("spazzatura",f"uscite{now_str}.txt")
 # comandi a Intel VTune Profiler
 def newProcessCommands(dataset):
+	
 	out0, error0 = run_command("conda activate stageENV")
 	args = f" -i {dataset} -e --elevated"
 	print("inizia la collezione dei dati, attendi qualche minuto...\n")
 	out1, error1 = run_command(collector + args)
 	print("\n La collezione dei dati è conclusa! Inizia la conversione in formato csv...\n")
+	
 	out2, error2 = run_command(converter_to_csv)
 	
 
