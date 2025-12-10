@@ -23,9 +23,6 @@ p_csv = pathlib.Path(p).parents[1] / "results" / now_str
 exp_csv = f"experiment_{now_str}.csv"
 f_csv = pathlib.Path(p).parents[1] / "results" / exp_csv
 main_path = pathlib.PurePath(p).parents[1] / "bin"
-<<<<<<< HEAD
-cmd_path = rf"call C:\Users\utente\miniconda3\condabin\conda.bat activate stageENV"
-=======
 
 
 # funzione per selezionare il comando corretto per comunicare con VTune Profiler. Se si è in un ambiente conda,
@@ -35,7 +32,7 @@ def condaPathSelect(p_csv):
 	conda = dataprocess.readConda()
 	
 	if conda != "notConda":
-		cmd_path = rf"call C:\Users\utente\miniconda3\condabin\conda.bat activate {conda}"
+		cmd_path = rf"call %USERPROFILE%\miniconda3\condabin\conda.bat activate {conda}"
 	else:
 		cmd_path = rf"echo nothing"
 	collector = rf"{cmd_path} && vtune -collect system-overview -data-limit=200 -d=15 -discard-raw-data -finalization-mode=none -r {p_csv} -knob analyze-power-usage=true -knob sampling-interval=1000 -- python Main.py"
@@ -43,7 +40,6 @@ def condaPathSelect(p_csv):
 	return collector
 
 
->>>>>>> experimental
 result_path = rf"..\results\experiment_{now_str}"
 converter_to_csv = rf"vtune -report summary -result-dir {p_csv} -report-output {f_csv} -format csv -csv-delimiter comma"
 
@@ -58,13 +54,7 @@ def run_command(cmd):
 	universal_newlines = True,
 	cwd = main_path
 	)
-<<<<<<< HEAD
 	
-	return process.communicate()
-
-	
-	
-=======
 	while process.poll() is None:
 		line = process.stderr.readline()
 		if not line:
@@ -75,7 +65,8 @@ def run_command(cmd):
 
 	return stdoutFull
 
->>>>>>> experimental
+	
+	
     
 # questa funzione verifica se l'utente ha i permessi di admin. In caso contrario, rilancia il programma
 # da capo con i permessi elevati.
@@ -140,19 +131,8 @@ output = p.parents[1].joinpath("results",exp_csv)
 # comandi a Intel VTune Profiler
 def newProcessCommands(dataset):
 	
-<<<<<<< HEAD
-	out0, error0 = run_command("conda activate stageENV")
 	args = f" -i {dataset} -e --elevated"
 	print("inizia la collezione dei dati, attendi qualche minuto...\n")
-	out1, error1 = run_command(collector + args)
-	print("\n La collezione dei dati è conclusa! Inizia la conversione in formato csv...\n")
-	
-	out2, error2 = run_command(converter_to_csv)
-	
-=======
-	args = f" -i {dataset} -e --elevated"
-	print("inizia la collezione dei dati, attendi qualche minuto...\n")
->>>>>>> experimental
 
 	strderrCollector = run_command(condaPathSelect(p_csv) + args)
 	
