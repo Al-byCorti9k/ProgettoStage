@@ -1,5 +1,4 @@
-#classe per comunicazione con i moduli esterni. In particolare, con VTune Profiler e CodeCarbon (forse
-# la sua fork) per il calcolo dei consumi energetici
+#classe per comunicazione con i moduli esterni. In particolare, con VTune Profiler e CodeCarbon per il calcolo dei consumi energetici
 
 import pathlib
 from datetime import datetime
