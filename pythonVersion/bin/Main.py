@@ -1,18 +1,24 @@
-import pandas as pd
-import numpy as np
+# punto di accesso al programma per il calcolo della LOOCV di un modello di regressione lineare
+# e dei relativi consumi energetici con CodeCarbon e Intel VTune Profiler
+
 import pathlib
+
+import pandas as pd
 from sklearn.metrics import matthews_corrcoef
-import sys 
-import time
+
 import dataprocess
 import viewer
-import esternProcess
+
 
 
 
 #ottengo la lista di argomenti da linea di comando
 args = viewer.parser.parse_args()
 viewer.showAssociationList(args.al)
+
+# Prendiamo il nome del conda enviroment
+if not args.elevated:
+    dataprocess.setConda()
 
 #gestione casistica scelta multipla dei datasets. ottengo delle liste
 #dtype_dict, name_csv = helper.multipleDatasetSelection(args.i)
@@ -25,7 +31,8 @@ for key, value in dtype_csv_dict.items():
     p = pathlib.Path(__file__)
     p_csv = pathlib.PurePath(p).parents[2].joinpath("data", name_csv)
     df = pd.read_csv(p_csv, dtype = dtype_dict)
-    viewer.datasetPreview(df, name_csv)
+    if not args.elevated:
+        viewer.datasetPreview(df, name_csv)
     #ottengo tutte le colonne
 
     x_predictor, y_response, columnNotExist, columnNonCat  = dataprocess.columnPredictionSelect(args.cn, df)
@@ -34,16 +41,21 @@ for key, value in dtype_csv_dict.items():
    # è stata selezionata la modalità visualizzazione, si procede nell'iterazione
     if columnNotExist or columnNonCat or args.v :
         continue
-    y_predict, times = dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
-    
+    MCC = 0
+    times = 0
+    if not args.elevatedloocv:
+        
+        y_predict, times = dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
+        MCC = matthews_corrcoef(y_response, y_predict)
+          
 
-    os = esternProcess.checkOperatingSystem()
+    os = dataprocess.checkOperatingSystem()
     consumptions = dataprocess.energyConsumption(os, args.e, args.ec, name_csv, x_predictor, y_response)
-
-    MCC = matthews_corrcoef(y_response, y_predict)
+    
+    dataprocess.addRowToCSV(consumptions, os, args.e, name_csv, args.ec, MCC, times)  
+    
     
 
-    dataprocess.addRowToCSV(MCC, times, consumptions, os, args.e, name_csv, args.ec)
 
 # Stampa e salvataggio dei risultati
 if not args.elevated and not args.v:

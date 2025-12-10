@@ -6,7 +6,6 @@ from datetime import datetime
 import subprocess
 import ctypes
 import sys
-import platform
 import csv
 import shutil
 
@@ -20,13 +19,32 @@ now = datetime.now()
 now_str = now.strftime("%Y-%m-%d_%Hh-%Mm-%Ss")
 
 p = pathlib.Path(__file__)
-p_csv = pathlib.PurePath(p).parents[1].joinpath("results",now_str)
+p_csv = pathlib.Path(p).parents[1] / "results" / now_str
 exp_csv = f"experiment_{now_str}.csv"
-f_csv = pathlib.PurePath(p).parents[1].joinpath("results",exp_csv)
+f_csv = pathlib.Path(p).parents[1] / "results" / exp_csv
 main_path = pathlib.PurePath(p).parents[1] / "bin"
+<<<<<<< HEAD
 cmd_path = rf"call C:\Users\utente\miniconda3\condabin\conda.bat activate stageENV"
+=======
+
+
+# funzione per selezionare il comando corretto per comunicare con VTune Profiler. Se si è in un ambiente conda,
+# fa in modo che venga attivato quando il processo elevato chiama VTune Profiler, altrimenti esegue in ambiente python
+def condaPathSelect(p_csv):
+	
+	conda = dataprocess.readConda()
+	
+	if conda != "notConda":
+		cmd_path = rf"call C:\Users\utente\miniconda3\condabin\conda.bat activate {conda}"
+	else:
+		cmd_path = rf"echo nothing"
+	collector = rf"{cmd_path} && vtune -collect system-overview -data-limit=200 -d=15 -discard-raw-data -finalization-mode=none -r {p_csv} -knob analyze-power-usage=true -knob sampling-interval=1000 -- python Main.py"
+
+	return collector
+
+
+>>>>>>> experimental
 result_path = rf"..\results\experiment_{now_str}"
-collector = rf"{cmd_path} && vtune -collect system-overview -no-analyze-system -r {p_csv} -knob analyze-power-usage=true -- python Main.py"
 converter_to_csv = rf"vtune -report summary -result-dir {p_csv} -report-output {f_csv} -format csv -csv-delimiter comma"
 
 # questa funzione serve a lanciare i comandi sulla shell con i permessi elevati. E' con 
@@ -40,11 +58,24 @@ def run_command(cmd):
 	universal_newlines = True,
 	cwd = main_path
 	)
+<<<<<<< HEAD
 	
 	return process.communicate()
 
 	
 	
+=======
+	while process.poll() is None:
+		line = process.stderr.readline()
+		if not line:
+			break
+		print("VTune's Call:", line.rstrip())
+	
+	stdoutFull = process.stdout.read()
+
+	return stdoutFull
+
+>>>>>>> experimental
     
 # questa funzione verifica se l'utente ha i permessi di admin. In caso contrario, rilancia il programma
 # da capo con i permessi elevati.
@@ -69,14 +100,47 @@ def cleaner(path):
 
 
 
+
+
+# funzione che serve per controllare i diversi exit code delle chiamate con subprocess.Popen e
+# verificare che tutte le operazioni si siano svolte come previsto
+def flagExitCodeChecker():
+		lines = flag.read_text().splitlines()
+		lineIndex = 1
+		
+		for line in lines[:4]:
+			lineF = line.rstrip()
+			if lineF[-1:] != "0" and lineF[-1:] != ":":
+				
+				if  lineIndex == 1:
+					print("il csv non è stato creato\n")
+					
+				if lineIndex == 2:
+					print("La collezione non è andata a buon fine\n")
+					print(line)
+				if lineIndex == 3:
+					print("il report non è andato a buon fine\n")
+					print(line)
+				
+			lineIndex += 1
+		
+			
+		flag.unlink()
+
+
+
+
+
+
 flag =p.parent / "child_done.flag"
-time = p.parent / "time_time.flag"
+times = p.parent / "time_time.flag"
 output = p.parents[1].joinpath("results",exp_csv)
-errors = p.parents[1].joinpath("spazzatura",f"spazzatura{now_str}.txt")
-uscite = p.parents[1].joinpath("spazzatura",f"uscite{now_str}.txt")
+
+
 # comandi a Intel VTune Profiler
 def newProcessCommands(dataset):
 	
+<<<<<<< HEAD
 	out0, error0 = run_command("conda activate stageENV")
 	args = f" -i {dataset} -e --elevated"
 	print("inizia la collezione dei dati, attendi qualche minuto...\n")
@@ -85,19 +149,32 @@ def newProcessCommands(dataset):
 	
 	out2, error2 = run_command(converter_to_csv)
 	
+=======
+	args = f" -i {dataset} -e --elevated"
+	print("inizia la collezione dei dati, attendi qualche minuto...\n")
+>>>>>>> experimental
 
+	strderrCollector = run_command(condaPathSelect(p_csv) + args)
+	
+	print("\n La collezione dei dati è conclusa! Inizia la conversione in formato csv...\n")
+	stderrConverter= run_command(converter_to_csv)
+	
 	if output.exists():
 					exit_code = 0
 	else:
 					exit_code = 1
-# vengono scritti due file, che serviranno al processo padre per verificare lo status del figlio. 
-# Purtroppo Windows non permette con shell32.shellExcuteW le normali gestioni dei processi padre/figlio come si potrebbe fare su Linux.
-# Questo è il modo più semplice che ho trovato.
-	flag.write_text(str(exit_code))
-	time.write_text(str(now_str))
-	errors.write_text(f"{str(error0)}\n{str(error1)}\n{str(error2)}\n")
-	uscite.write_text(f"{str(out0)}\n{str(out1)}\n{str(out2)}\n")
+	# per la stampa e il controllo di tutti gli esiti delle operazioni
+	ex0 = "result of CSV's creation: " + str(exit_code)
+	ex1 = "result of Collection: " + str(strderrCollector)
+	ex2 = "result of report: " + str(stderrConverter)
+	allExitCode = f"{ex0}\n{ex1}\n{ex2}\n"
+	flag.write_text(allExitCode)
+	times.write_text(str(now_str))
+	
+	
 	sys.exit(exit_code)
+
+
 
 
 # funzione che ottiene dal CSV il dato del consumo energetico
@@ -120,24 +197,21 @@ def VTuneProfilerInterface(dataset):
 	if is_admin():
 					newProcessCommands(dataset)
 	else:
-		cmd_line = [sys.argv[0], sys.argv[1], str(dataset)]
+		cmd_line = [sys.argv[0], sys.argv[1], str(dataset),"--elevated","--elevatedloocv"]
 		# rilancia il programma in una shell con i permessi di admin
 		ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(cmd_line), None, 1)
 
 # quando il processo padre chiama il "figlio" si mette in attesa finchè i report flag e time
 # non vengono generati. Si occupa di controllarne lo status
 	while True:
-					if flag.exists():
-									exit_code = int(flag.read_text())
-									print("Exit code:", exit_code)
-									flag.unlink()
-
-									break
+			if flag.exists():
+				flagExitCodeChecker()
+				break
 # precedentemente abbiamo creato due file, time e flag. Il primo per memorizzare il momento dell'esecuzione
 # dell'esperimento, il secondo per memorizzare l'esito.
-	if time.exists():
-					text = time.read_text()
-					time.unlink()
+	if times.exists():
+					text = times.read_text()
+					times.unlink()
 	f_csv = pathlib.PurePath(p).parents[1].joinpath("results",f"experiment_{text}.csv")
 
 	energyConsumption = getEnergyFromCSV(f_csv)
@@ -149,20 +223,11 @@ def VTuneProfilerInterface(dataset):
 	return stimatedEnergy
 
 
-# funzione che controlla il sistema operativo su cui si sta eseguendo il codice
-def checkOperatingSystem():
-    os = platform.system()
-    return os
-
-
-
 
 
 
 
 #funzione che chiama il tracker del modulo CodeCarbon
-
-
 indice = 0
 
 def callCodeCarbone(x_predictor, y_response):
