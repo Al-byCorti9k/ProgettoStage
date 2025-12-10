@@ -5,6 +5,7 @@ import platform
 import time
 import pathlib
 from datetime import datetime
+import os
 
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline, Pipeline
@@ -42,6 +43,7 @@ categoryData = {
     datasets[4]:
             ['sex_0man_1woman', 'insulin_regimen_binary']
         }
+
 
 #funzione che seleziona il dataset scelto dall'utente e distingue colonne
 #categoriche da quelle numeriche.
@@ -104,7 +106,8 @@ def columnPredictionSelect(columnName, dataFrame ):
 
 
 
-# Funzionalità per il preprocessing del dataframe
+# Funzionalità per il preprocessing del dataframe. Gestisce i dati mancanti e 
+# il confronto tra dati categorici e non
 numeric_trasformer = Pipeline(steps =
                               [ 
                             ('mean', SimpleImputer(strategy="mean")),
@@ -174,6 +177,7 @@ data = {'Dataset': [],
         "Operating system": [],
         "LOOCV's time execusion (s)": [],
         "LOOCV's time execution (ms)": [],
+        "MCC": [],
         "energy consumption (kWh)": [],
         "methodology": []
             }
@@ -190,7 +194,7 @@ def mJtoKwh(energyInMilliJoule):
 
 
 # Aggiunge una riga al dataframe pandas con i risultati dell'iterazione attuale
-def addRowToCSV(MCC, time, consumptions, os, EnergyEnable, name_csv, forced):
+def addRowToCSV(consumptions, os, EnergyEnable, name_csv, forced, MCC, times):
     
     if not(EnergyEnable):
         consumptions = 0
@@ -203,9 +207,9 @@ def addRowToCSV(MCC, time, consumptions, os, EnergyEnable, name_csv, forced):
         else:
             method = "CodeCarbon RALP"
         
-    mt = time * 1000
+    mt = times * 1000
     kwt = mJtoKwh(consumptions)
-    new_row = [ name_csv, os, time, mt, kwt, method ]
+    new_row = [ name_csv, os, times, mt, MCC, kwt, method ]
            
     dfCSV.loc[dfCSV.shape[0]] = new_row
 
@@ -229,3 +233,29 @@ def createTXT():
     file_path = f"{pathlib.PurePath(p).parents[1]}/results/figlio_{now_str}.txt"
     with open(file_path, "w") as f:
         f.write("Ciao, questo è un file di testo del figlio!\n")
+
+
+# funzione che controlla il sistema operativo su cui si sta eseguendo il codice
+def checkOperatingSystem():
+    os = platform.system()
+    return os
+
+
+# sezione dedicata a funzioni per l'estrazione e il salvataggio su un file del 
+# nome dell'enviroment conda. Se l'utente non sta eseguendo il programma da un enviroment
+# conda ma rispetta comunque i requisiti, il programma procederà comunque
+condaF = pathlib.Path(p).parents[1] / "conda.flag"
+
+def setConda():
+        try:
+            eoe = os.environ["CONDA_DEFAULT_ENV"]
+        except:
+            eoe = "notConda"
+        condaF.write_text(eoe)
+# nota che una volta che prima di ritornare il nome dell'ENV di conda, 
+# elimina il file     
+def readConda():
+    conda = condaF.read_text()
+    condaF.unlink()
+    return conda
+ 

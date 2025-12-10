@@ -3,7 +3,7 @@
 
 import argparse
 from enum import Enum
-# import logging
+
 
 import pandas as pd
 from IPython.display import display
@@ -41,7 +41,7 @@ parser.add_argument('-ec', action="store_true", help = "force computation of ene
 parser.add_argument('-b', action = 'store_false', help = "deactivate computation of the MCC")
 parser.add_argument('-v', action = 'store_true', help = "visualize a preview of selected datasets" )
 parser.add_argument('--elevated', action = 'store_true', help = argparse.SUPPRESS)
-
+parser.add_argument('--elevatedloocv', action = 'store_true', help = argparse.SUPPRESS)
 # classe che enumera tutti i dataset disponibili
 class Dataset(Enum):
     SEPSIS = 1
