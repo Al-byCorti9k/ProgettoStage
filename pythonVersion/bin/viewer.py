@@ -11,7 +11,7 @@ from IPython.display import display
 import dataprocess
 
 #messaggi di epilogo e descrizione del programma passati al parser
-epilog_message = ("A typical usage involves listing the" 
+epilog_message = ("A typical usage involves listing the " 
                 "available datasets with -al, " 
                 "and then selecting those you want to operate on with -i."
                 " All the other arguments come afterward and allow fine-grained control of the script. \n \n")
@@ -35,13 +35,11 @@ parser.add_argument('-r', nargs ='?',
                     help = "select the saving path of results. Defult .pythonVersion\results")
 parser.add_argument('-cn', nargs = '*', 
                     help = "select the name of the categorical column to predict. E.G: python Main.py -i 2 3 column2 column3. Default is the last column")
-parser.add_argument('-t', action = 'store_false', help = "deactivate computation of LOOCV's time")
 parser.add_argument('-e', action = 'store_false', help = "deactivate computation of energy consumption")
 parser.add_argument('-ec', action="store_true", help = "force computation of energy consumption with codeCarbon. Default False")
-parser.add_argument('-b', action = 'store_false', help = "deactivate computation of the MCC")
 parser.add_argument('-v', action = 'store_true', help = "visualize a preview of selected datasets" )
 parser.add_argument('--elevated', action = 'store_true', help = argparse.SUPPRESS)
-parser.add_argument('--elevatedloocv', action = 'store_true', help = argparse.SUPPRESS)
+#parser.add_argument('--elevatedloocv', action = 'store_true', help = argparse.SUPPRESS)
 # classe che enumera tutti i dataset disponibili
 class Dataset(Enum):
     SEPSIS = 1
@@ -59,7 +57,7 @@ def multipleDatasetSelection(args):
        
     else:
         #rimuovo i duplicati
-        args = list(set(args))
+        args = list(dict.fromkeys(args))
         for userSelection in args:
             if userSelection >= 1 and userSelection <=5:
                 dtype_dict, name_csv = dataprocess.datasetsSelection(userSelection)

@@ -172,11 +172,11 @@ def getEnergyFromCSV(f_csv):
 
 
 # Si interfaccia a Vtune Profiler e restituisce il consumo energetico in mJ
-def VTuneProfilerInterface(dataset):
+def VTuneProfilerInterface(dataset, columnName):
 	if is_admin():
 					newProcessCommands(dataset)
 	else:
-		cmd_line = [sys.argv[0], sys.argv[1], str(dataset),"--elevated","--elevatedloocv"]
+		cmd_line = [sys.argv[0], sys.argv[1], str(dataset), "-cn", columnName, "--elevated"]
 		# rilancia il programma in una shell con i permessi di admin
 		ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(cmd_line), None, 1)
 

@@ -81,6 +81,7 @@ def columnPredictionSelect(columnName, dataFrame ):
     columnNonCat = False
     x_predictor = None
     y_response = None
+    
 
     #controllo se esiste la colonna selezionata ed è di tipo category
     if columnName != None and columnIndex != -1:
@@ -165,7 +166,7 @@ def energyConsumption(operatingSystem, activation, forceCodeCarbon, name_csv, x_
             VTuneSelectedDataset = datasets.index(name_csv) + 1
             print("chiama VTune Profiler")
             #print(f"VTune dataset selected: {VTuneSelectedDataset}")
-            dt = esternProcess.VTuneProfilerInterface(VTuneSelectedDataset)
+            dt = esternProcess.VTuneProfilerInterface(VTuneSelectedDataset, y_response.name)
         else:
             dt = esternProcess.callCodeCarbone(x_predictor, y_response)
     return dt
@@ -175,6 +176,7 @@ def energyConsumption(operatingSystem, activation, forceCodeCarbon, name_csv, x_
 # creo un dataframe pandas per gestire la generazione del file CSV dei risultati
 data = {'Dataset': [],
         "Operating system": [],
+        "Column selected": [],
         "LOOCV's time execusion (s)": [],
         "LOOCV's time execution (ms)": [],
         "MCC": [],
@@ -194,7 +196,7 @@ def mJtoKwh(energyInMilliJoule):
 
 
 # Aggiunge una riga al dataframe pandas con i risultati dell'iterazione attuale
-def addRowToCSV(consumptions, os, EnergyEnable, name_csv, forced, MCC, times):
+def addRowToCSV(consumptions, os, EnergyEnable, name_csv, forced, MCC, times, actualColumn):
     
     if not(EnergyEnable):
         consumptions = 0
@@ -209,7 +211,7 @@ def addRowToCSV(consumptions, os, EnergyEnable, name_csv, forced, MCC, times):
         
     mt = times * 1000
     kwt = mJtoKwh(consumptions)
-    new_row = [ name_csv, os, times, mt, MCC, kwt, method ]
+    new_row = [ name_csv, os, actualColumn, times, mt, MCC, kwt, method ]
            
     dfCSV.loc[dfCSV.shape[0]] = new_row
 

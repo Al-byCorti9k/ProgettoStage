@@ -8,7 +8,7 @@ from sklearn.metrics import matthews_corrcoef
 
 import dataprocess
 import viewer
-
+import sys
 
 
 
@@ -17,12 +17,13 @@ args = viewer.parser.parse_args()
 viewer.showAssociationList(args.al)
 
 # Prendiamo il nome del conda enviroment
-if not args.elevated:
+if not args.elevated and not args.ec :
     dataprocess.setConda()
 
 #gestione casistica scelta multipla dei datasets. ottengo delle liste
-#dtype_dict, name_csv = helper.multipleDatasetSelection(args.i)
+
 dtype_csv_dict = viewer.multipleDatasetSelection(args.i)
+
 
 for key, value in dtype_csv_dict.items():
     dtype_dict = value
@@ -36,23 +37,24 @@ for key, value in dtype_csv_dict.items():
     #ottengo tutte le colonne
 
     x_predictor, y_response, columnNotExist, columnNonCat  = dataprocess.columnPredictionSelect(args.cn, df)
-   
+    
    # Se l'utente ha selezionato una colonna non esistente, non categorica oppure
    # è stata selezionata la modalità visualizzazione, si procede nell'iterazione
     if columnNotExist or columnNonCat or args.v :
         continue
     MCC = 0
     times = 0
-    if not args.elevatedloocv:
+    if not args.elevated:
         
         y_predict, times = dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
         MCC = matthews_corrcoef(y_response, y_predict)
           
 
     os = dataprocess.checkOperatingSystem()
+    
     consumptions = dataprocess.energyConsumption(os, args.e, args.ec, name_csv, x_predictor, y_response)
     
-    dataprocess.addRowToCSV(consumptions, os, args.e, name_csv, args.ec, MCC, times)  
+    dataprocess.addRowToCSV(consumptions, os, args.e, name_csv, args.ec, MCC, times, y_response.name)  
     
     
 
