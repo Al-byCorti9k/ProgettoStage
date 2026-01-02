@@ -23,7 +23,7 @@ fn main() -> Result<(), PolarsError>{
     csv_path.push(selected_cvs);
 
     //ottenuto il percorso, con polars creiamo il relativo dataframe
-    let  df = CsvReadOptions::default() //imposta i parametri default per la lettura del .csv
+    let  mut df = CsvReadOptions::default() //imposta i parametri default per la lettura del .csv
         .try_into_reader_with_file_path(Some(csv_path.into())) //into() converte &str -> PathBuf
         .unwrap() 
         .finish() //effettua l'effettiva conversione
@@ -38,43 +38,42 @@ fn main() -> Result<(), PolarsError>{
     
     //questo passaggio converte tutti dati dell'ultima colonna in i32
     let target_index = df.shape().1 - 1;
-    let new_column_i32 = df.select_at_idx(target_index)
-                                    .unwrap()
-                                    .cast(&DataType::Int32)?; // <-- qui risolvi il Result
-    //aggiungi la colonna con i tipi convertiti in i32 al dataframe mutabile originale
-    //let df = df.with_column(new_column_i32)?;
 
-    //ora faremo la stessa cosa ma per tutte le altre colonne, che devono essere convertite in f64
-    //TODO scrivere la funzione apply che effettua la conversione di tutte le altre colonne
-
-
-    //prelevo i sample per l'addestramento. Un riferimento mutevole alla slice di colonne
-    let mut df_samples = df.select_by_range(0..target_index)?;
 
     //l'obiettivo adesso è quello di creare una funzione che converta i dati in f64
     //qui ho avuto un problema perchè apply richeide un riferimento mutabile
     //mentre get_column_names() restituisce una stringa slice, che sappiamo essere di tipo &str (immutabile)
     //creo un iteratore, poi mappo su ogni elemento la chiusura che converte in stringa, dopo converto nella collezione
-    let col_names : Vec<String> = df_samples
+    let mut col_names : Vec<String> = df
                     .get_column_names()
                     .iter()
                     .map(| s | s.to_string())
                     .collect();
+    //ottengo il nome della colonna di interesse. In questo caso l'ultima
+    let target_name = col_names.swap_remove(target_index);
 
     for name in col_names {
        
-        df_samples.apply(&name, |s| {
+        df.apply(&name, |s| {
             
             s.cast(&DataType::Float64).unwrap()
             
                 
         })?;
+
+    df.apply(&target_name, | s|{
+
+            s.cast(&DataType::Int32).unwrap()
+    })?;
     
     
 }
-    let df = df_samples.insert_column(target_index, new_column_i32)?;
+    
 
     println!{"dopo la conversione la tabella è così:\n {}",df.tail(Some(5))};
+
+
+    //TODO convertire la colonna target in array1, le altre in array2 per essere accettate da LINFA
 
 
     //let y: Vec<i32> = new_column_i32.collect();
