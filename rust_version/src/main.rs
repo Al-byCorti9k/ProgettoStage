@@ -7,7 +7,7 @@ use std::env;
 
 
 use polars::prelude::*;
-use ndarray::Array1;
+//use ndarray::Array1;
 
 fn main() -> Result<(), PolarsError>{
     configure_the_environment();
@@ -22,40 +22,64 @@ fn main() -> Result<(), PolarsError>{
     let selected_cvs = "10_7717_peerj_5665_dataYM2018_neuroblastoma.csv";
     csv_path.push(selected_cvs);
 
-    //facciamo una stampa per verificare che sia corretto
-    dbg!(&csv_path); 
-
     //ottenuto il percorso, con polars creiamo il relativo dataframe
-    let mut df = CsvReadOptions::default() //imposta i parametri default per la lettura del .csv
+    let  df = CsvReadOptions::default() //imposta i parametri default per la lettura del .csv
         .try_into_reader_with_file_path(Some(csv_path.into())) //into() converte &str -> PathBuf
         .unwrap() 
         .finish() //effettua l'effettiva conversione
         .unwrap();
     
-    println!{"{}", df.tail(Some(5)) };
+    println!{"prima della conversione, la tabella è così: \n {}", df.tail(Some(5)) };
 
     //Conversione del dataframe di Polars in Array1 (target) e Array2(addestramento) per 
     //addestrare un modello di regressione logistica con "linfa"
 
     //conversione Array1
-    let prova = df.shape().1 - 1;
-    let last_col_name = df.get_column_names()[prova];
-    println!("Ultima colonna: {}", last_col_name);
     
     //questo passaggio converte tutti dati dell'ultima colonna in i32
-    let new_column_i32 = df.select_at_idx(df.shape().1 - 1)
-                    .unwrap()
-    .cast(&DataType::Int32)?; // <-- qui risolvi il Result
+    let target_index = df.shape().1 - 1;
+    let new_column_i32 = df.select_at_idx(target_index)
+                                    .unwrap()
+                                    .cast(&DataType::Int32)?; // <-- qui risolvi il Result
     //aggiungi la colonna con i tipi convertiti in i32 al dataframe mutabile originale
-    let df = df.with_column(new_column_i32)?;
+    //let df = df.with_column(new_column_i32)?;
 
     //ora faremo la stessa cosa ma per tutte le altre colonne, che devono essere convertite in f64
     //TODO scrivere la funzione apply che effettua la conversione di tutte le altre colonne
 
 
-    let y: Vec<i32> = new_column_i32.collect();
+    //prelevo i sample per l'addestramento. Un riferimento mutevole alla slice di colonne
+    let mut df_samples = df.select_by_range(0..target_index)?;
 
-    let y = Array1::from(y);
+    //l'obiettivo adesso è quello di creare una funzione che converta i dati in f64
+    //qui ho avuto un problema perchè apply richeide un riferimento mutabile
+    //mentre get_column_names() restituisce una stringa slice, che sappiamo essere di tipo &str (immutabile)
+    //creo un iteratore, poi mappo su ogni elemento la chiusura che converte in stringa, dopo converto nella collezione
+    let col_names : Vec<String> = df_samples
+                    .get_column_names()
+                    .iter()
+                    .map(| s | s.to_string())
+                    .collect();
+
+    for name in col_names {
+       
+        df_samples.apply(&name, |s| {
+            
+            s.cast(&DataType::Float64).unwrap()
+            
+                
+        })?;
+    
+    
+}
+    let df = df_samples.insert_column(target_index, new_column_i32)?;
+
+    println!{"dopo la conversione la tabella è così:\n {}",df.tail(Some(5))};
+
+
+    //let y: Vec<i32> = new_column_i32.collect();
+
+    //let y = Array1::from(y);
     
     Ok(())
     
@@ -71,7 +95,9 @@ pub fn configure_the_environment() {
         env::set_var("POLARS_FMT_STR_LEN", "50");  // numero massimo di caratteri per stringhe stampati
     }}
 
-
+pub fn columns_convert_to_f64(){
+    
+}
 
 
 
