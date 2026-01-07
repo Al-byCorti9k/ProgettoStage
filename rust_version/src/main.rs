@@ -11,7 +11,7 @@ use polars::prelude::*;
 
 pub mod data_process;
 
-use crate::data_process::data::get_dataset;
+use crate::data_process::data::get_dataset_info;
 use crate::data_process::errors::AppError;
 
 fn main() -> Result<(), AppError>{
@@ -102,7 +102,7 @@ fn main() -> Result<(), AppError>{
 
     //let y = Array1::from(y);
 
-    println!{"il dataset che ho selezionato è: {}\n", get_dataset(Some(2))?.get_csv() };
+    println!{"il dataset che ho selezionato è: {}\n", get_dataset_info(Some(2))?.get_csv() };
    
     Ok(())
     

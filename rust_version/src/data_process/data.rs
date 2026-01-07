@@ -1,7 +1,9 @@
 //modulo con la lista dei csv, le colonne categoriche
 
+use std::collections::HashSet;
 
-//ricorda: dentro mod non puoi dichiarare con let
+
+
 const DATASETS: [&str; 5] = [
                    "journal.pone.0148699_S1_Text_Sepsis_SIRS_EDITED.csv",
                    "10_7717_peerj_5665_dataYM2018_neuroblastoma.csv",
@@ -16,28 +18,30 @@ const DATASETS: [&str; 5] = [
 pub struct DatasetInfo {
          file: &'static str,
          categorical_cols: &'static [&'static str]
+         
     }
-
+//metodi associati al type DatasetInfo
 impl DatasetInfo {
-
-        pub fn get_csv(&self) -> &str{
-            self.file
+        //getter
+        pub fn get_csv(&self) -> &'static str{
+            &self.file
         }
-
+        //getter
         pub fn get_cat_cols(&self) -> &'static [&'static str] {
-            self.categorical_cols
+            &self.categorical_cols
         }
 
     }
-    #[derive(Debug)]
 
 // possibili errori di accesso ai dati    
+#[derive(Debug)]    
 pub enum DatasetError {
+    //se un utente seleziona un dataset fuori dal range, ottiene questo errore
     IndexOutOfBounds { index: usize },
 }
 
 // preleva lo schema del dataset selezionato. UNICO PUNTO DI ACCESSO ESTERNO
-pub fn get_dataset( index: Option<usize>) -> Result<&'static DatasetInfo, DatasetError > {
+pub fn get_dataset_info( index: Option<usize>) -> Result<&'static DatasetInfo, DatasetError > {
             //se l'input è nullo, l'indice si riferisce al primo dataset
             let idx = index.unwrap_or(0); 
             DATASETS_INFO
@@ -68,7 +72,8 @@ const DATASETS_INFO: &[DatasetInfo] =  &[
         DatasetInfo {
             file: DATASETS[2],
             categorical_cols: &[
-                "Male (1=Yes, 0=No)", "Etiology HF(1=Yes, 0=No)", "Death (1=Yes, 0=No)", "Hospitalized (1=Yes, 0=No)"
+                "Male (1=Yes, 0=No)", "Etiology HF(1=Yes, 0=No)", 
+                "Death (1=Yes, 0=No)", "Hospitalized (1=Yes, 0=No)"
             ],
         },
 
@@ -90,5 +95,35 @@ const DATASETS_INFO: &[DatasetInfo] =  &[
 
     ];
 
-    
+//i trait sono simili come concetto alle interfacce di Java. In questo caso
+//espandiamo le funzionalità con un metodo per convertire le slice di stringhe
+//in HashSet. Servirà per avere accesso alle colonne categoriche in tempo O(1)    
+pub trait VecToHash {
+     fn vec_to_set(&self) -> HashSet<&'static str>;
+}
 
+impl VecToHash for &'static [&'static str]{
+   fn vec_to_set(&self) -> HashSet<&'static str> {
+        self.iter()
+             .copied()
+             .collect()
+}
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::data_process::errors::AppError;
+
+    use super::*;
+
+    #[test]
+    fn test_conversione_to_hashset() -> Result< (), AppError>{
+        let pippo = get_dataset_info(Some(0))?.get_cat_cols();
+        let franco = pippo.vec_to_set();
+
+        let prova = franco.get("sex_woman").unwrap();
+        println!("ciao: {}", prova);
+
+        Ok(())
+    }
+}
