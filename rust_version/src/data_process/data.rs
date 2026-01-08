@@ -97,7 +97,8 @@ const DATASETS_INFO: &[DatasetInfo] =  &[
 
 //i trait sono simili come concetto alle interfacce di Java. In questo caso
 //espandiamo le funzionalità con un metodo per convertire le slice di stringhe
-//in HashSet. Servirà per avere accesso alle colonne categoriche in tempo O(1)    
+//in HashSet. Servirà per avere accesso alle colonne categoriche in tempo
+// O(1)    
 pub trait VecToHash {
      fn vec_to_set(&self) -> HashSet<&'static str>;
 }
@@ -121,9 +122,10 @@ mod tests {
         let pippo = get_dataset_info(Some(0))?.get_cat_cols();
         let franco = pippo.vec_to_set();
 
-        let prova = franco.get("sex_woman").unwrap();
-        println!("ciao: {}", prova);
-
+        let prova = franco.get("sex_woman").copied().unwrap();
+        assert_eq!("sex_woman", prova);
+        let owner = get_dataset_info(Some(0))?.get_cat_cols()[0];
+        assert_eq!("sex_woman", owner);
         Ok(())
     }
 }

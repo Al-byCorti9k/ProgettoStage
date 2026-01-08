@@ -7,6 +7,7 @@ use std::env;
 
 
 use polars::prelude::*;
+
 //use ndarray::Array2;
 
 pub mod data_process;
@@ -24,17 +25,22 @@ fn main() -> Result<(), AppError>{
                 .join("data");
     //nota che join si occupa di mettere il separatore corretto per l'OS
     //scegliamo il dataset
-    let selected_cvs = "10_7717_peerj_5665_dataYM2018_neuroblastoma.csv";
+    let selected_cvs = "journal.pone.0175818_S1Dataset_Spain_cardiac_arrest_EDITED.csv";
     csv_path.push(selected_cvs);
 
     //ottenuto il percorso, con polars creiamo il relativo dataframe
-    let  mut df = CsvReadOptions::default() //imposta i parametri default per la lettura del .csv
+    let  mut df = CsvReadOptions::default()
+        .with_infer_schema_length( Some(500)) 
+        //imposta i parametri default per la lettura del .csv
         .try_into_reader_with_file_path(Some(csv_path.into())) //into() converte &str -> PathBuf
         .unwrap() 
         .finish() //effettua l'effettiva conversione
         .unwrap();
     
     println!{"prima della conversione, la tabella è così: \n {}", df.tail(Some(5)) };
+    let row = df.get_row(51)?;
+    println!("{:?}", row);
+
     
     //let dtype = df.column("outcome")?.dtype();
     //println!("Il dtype è: {}\n", dtype);
@@ -82,6 +88,28 @@ fn main() -> Result<(), AppError>{
     
 
     println!{"dopo la conversione la tabella è così:\n {}",df.tail(Some(5))};
+    let row = df.get_row(51)?;
+    println!("{:?}", row);
+
+   let has_null  = df
+    .null_count();        // produce un DataFrame
+    
+    println!("la colonna contiene valori nulli?: {}", has_null);
+    
+    let names = has_null.get_column_names_str();
+
+    for name in names {
+
+        //inserire logica
+    }
+
+ 
+
+    
+
+    
+    
+
 
 
     
@@ -109,7 +137,9 @@ fn main() -> Result<(), AppError>{
 }
 
 // Configure Polars with ENV vars
-
+// Rust richiede di usare unsafe Rust per la configurazione delle variabili
+// d'ambiente. Queste servono per personalizzare l'aspetto delle tabelle 
+// Polars
 pub fn configure_the_environment() {
     unsafe {
         env::set_var("POLARS_FMT_TABLE_ROUNDED_CORNERS", "1"); // mette gli angoli stondati
