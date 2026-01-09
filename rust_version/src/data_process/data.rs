@@ -100,11 +100,11 @@ const DATASETS_INFO: &[DatasetInfo] =  &[
 //in HashSet. Servirà per avere accesso alle colonne categoriche in tempo
 // O(1)    
 pub trait VecToHash {
-     fn vec_to_set(&self) -> HashSet<&'static str>;
+     fn vec_to_hashset(&self) -> HashSet<&'static str>;
 }
 
 impl VecToHash for &'static [&'static str]{
-   fn vec_to_set(&self) -> HashSet<&'static str> {
+   fn vec_to_hashset(&self) -> HashSet<&'static str> {
         self.iter()
              .copied()
              .collect()
@@ -120,7 +120,7 @@ mod tests {
     #[test]
     fn test_conversione_to_hashset() -> Result< (), AppError>{
         let pippo = get_dataset_info(Some(0))?.get_cat_cols();
-        let franco = pippo.vec_to_set();
+        let franco = pippo.vec_to_hashset();
 
         let prova = franco.get("sex_woman").copied().unwrap();
         assert_eq!("sex_woman", prova);

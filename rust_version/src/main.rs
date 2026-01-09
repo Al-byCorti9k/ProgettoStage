@@ -12,7 +12,7 @@ use polars::prelude::*;
 
 pub mod data_process;
 
-use crate::data_process::data::get_dataset_info;
+use crate::data_process::data::{VecToHash, get_dataset_info};
 use crate::data_process::errors::AppError;
 
 fn main() -> Result<(), AppError>{
@@ -77,31 +77,87 @@ fn main() -> Result<(), AppError>{
             
                 
         })?;
-
+    }
     df.apply(&target_name, | s|{
 
             s.cast(&DataType::Int32).unwrap()
     })?;
     
     
-}
-    
+
+    //SEZIONE PER LA GESTIONE VALORI NULLI
 
     println!{"dopo la conversione la tabella è così:\n {}",df.tail(Some(5))};
     let row = df.get_row(51)?;
     println!("{:?}", row);
 
-   let has_null  = df
+   let mut has_null  = df
     .null_count();        // produce un DataFrame
     
     println!("la colonna contiene valori nulli?: {}", has_null);
     
-    let names = has_null.get_column_names_str();
+    // facciamo la trasposta del dataframe. L'idea è sfruttare 
+    // l'ottimizzazione che Polars fa sulle operazioni per colonna
+    // per velocizzare il controllo delle colonne con celle vuote
+    let mut has_null_transpose = has_null.transpose(Some("columns"), None)?;
 
-    for name in names {
+    has_null_transpose.rename("column_0", "null_count".into())?;
+    // funzioni da me implementate per ottenere le colonne categoriche
+    let cat_cols = get_dataset_info(Some(3))?.get_cat_cols().vec_to_hashset();
+    //trasformo la colonna con il numero di elementi nulli per colonna in 
+    // un chunckedArray Iterabile. 
+    let s = has_null_transpose.column("null_count")?.u32()?; 
+    // enumerate è essenziale per ottenere l'indice della colonna
+    for (idx, opt_v) in s.into_iter().enumerate() {
+    if let Some(v) = opt_v {
+        if v > 0 {
+            println!("questa colonna ha celle vuote");
+            println!("con questo indice {}", idx);
+            let name = df.get_column_names_str()[idx];
+            println!("ecco la colonna {}", name);
+            if cat_cols.contains(name) {
+                println!("chiamo la funzione fill_null con moda");
+                /* 
+                let s_filled = df[name].fill_null(FillNullStrategy::Mean)?;
+                df.replace(name, s_filled)?;
+                */
+                //l'idea è quella di fare match con dtype, con i tipi
+                // i64  e f64. tutto questo vien fatto prima della conversione
+                //finale!!
+            }
+            else {
+                println!("chiamo la funzione fill_null con media");
+            }
+            
+        }
+        else {
+            println!("questa cella non ha celle vuote");
+        }
+    }
+}
+
+//TODO usare questa versione
+/*
+    for name in df.get_column_names_str() {
+    let s = df.column(name)?;
+    if s.null_count() > 0 {
+        df.apply(name, |s| Ok(s.fill_null(FillNullStrategy::Mean)?))?;
+    }
+}
+
+
+*/
+
+
+
+   // let names = has_null.get_column_names_str();
+
+
+
+    // for name in names {
 
         //inserire logica
-    }
+    //}
 
  
 
