@@ -2,8 +2,9 @@
 //un dataset con polars, convertiamo i dati correttamente, e poi addestriamo un modello 
 //di regressione lineare
 
+use core::f64;
 use std::path::Path;
-use std::env;
+use std::{env, i32};
 
 
 use polars::prelude::*;
@@ -14,6 +15,7 @@ pub mod data_process;
 
 use crate::data_process::data::{VecToHash, get_dataset_info};
 use crate::data_process::errors::AppError;
+use crate::data_process::preprocessing::{ChunckedArrayFromColumn, ModaFloat, ModaInt};
 
 fn main() -> Result<(), AppError>{
     configure_the_environment();
@@ -87,14 +89,13 @@ fn main() -> Result<(), AppError>{
 
     //SEZIONE PER LA GESTIONE VALORI NULLI
 
-    println!{"dopo la conversione la tabella è così:\n {}",df.tail(Some(5))};
-    let row = df.get_row(51)?;
-    println!("{:?}", row);
-
-   let mut has_null  = df
-    .null_count();        // produce un DataFrame
     
-    println!("la colonna contiene valori nulli?: {}", has_null);
+
+   // produce un DataFrame 
+   let mut has_null  = df.null_count();        
+   
+    
+   println!("la colonna contiene valori nulli?: {}", has_null);
     
     // facciamo la trasposta del dataframe. L'idea è sfruttare 
     // l'ottimizzazione che Polars fa sulle operazioni per colonna
@@ -108,45 +109,36 @@ fn main() -> Result<(), AppError>{
     // un chunckedArray Iterabile. 
     let s = has_null_transpose.column("null_count")?.u32()?; 
     // enumerate è essenziale per ottenere l'indice della colonna
-    for (idx, opt_v) in s.into_iter().enumerate() {
-    if let Some(v) = opt_v {
-        if v > 0 {
-            println!("questa colonna ha celle vuote");
-            println!("con questo indice {}", idx);
-            let name = df.get_column_names_str()[idx];
-            println!("ecco la colonna {}", name);
-            if cat_cols.contains(name) {
-                println!("chiamo la funzione fill_null con moda");
-                /* 
-                let s_filled = df[name].fill_null(FillNullStrategy::Mean)?;
-                df.replace(name, s_filled)?;
-                */
-                //l'idea è quella di fare match con dtype, con i tipi
-                // i64  e f64. tutto questo vien fatto prima della conversione
-                //finale!!
+  
+    let names: Vec<String> = df.get_column_names_str().iter().map(|s| s.to_string()).collect();
+    use crate::data_process::preprocessing::NumericCA;
+    for (idx, name ) in names.into_iter().enumerate() {
+        let s = df.column( &name )?;
+        if s.null_count() == 0 {
+            let a = s.fill_null(FillNullStrategy::Mean)?;
+            df.replace_column(idx, a );
+                               }
+         else {
+            let column_type = s.dtype();
+            let b =  s.get_chuncked_array_from_column_type(column_type)?;
+            match b {
+                 NumericCA::Int32(ca) => {
+                 let filled = ca.fill_null_with_values(ca.calculate_mode().unwrap())?;
+                // usa `filled` o sostituisci la colonna
+                 df.replace_column(idx, filled);
+                },
+                 NumericCA::Float64(ca) => {
+                 let filled = ca.fill_null_with_values(ca.calculate_mode().unwrap())?;
+                 df.replace_column(idx, filled);
             }
-            else {
-                println!("chiamo la funzione fill_null con media");
-            }
-            
-        }
-        else {
-            println!("questa cella non ha celle vuote");
-        }
-    }
 }
+           
 
-//TODO usare questa versione
-/*
-    for name in df.get_column_names_str() {
-    let s = df.column(name)?;
-    if s.null_count() > 0 {
-        df.apply(name, |s| Ok(s.fill_null(FillNullStrategy::Mean)?))?;
+        
     }
 }
 
 
-*/
 
 
 
@@ -161,9 +153,11 @@ fn main() -> Result<(), AppError>{
 
  
 
-    
+    println!("{:?}", df.shape());
 
-    
+    println!{"dopo la conversione la tabella è così:\n {}",df.tail(Some(5))};
+    let row = df.get_row(51)?;
+    println!("{:?}", row);
     
 
 
