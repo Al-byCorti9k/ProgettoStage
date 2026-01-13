@@ -2,9 +2,8 @@
 //un dataset con polars, convertiamo i dati correttamente, e poi addestriamo un modello
 //di regressione lineare
 
-
-use std::path::Path;
 use std::env;
+use std::path::Path;
 
 use polars::prelude::*;
 
@@ -14,7 +13,7 @@ pub mod data_process;
 
 use crate::data_process::data::{VecToHash, get_dataset_info};
 use crate::data_process::errors::AppError;
-use crate::data_process::preprocessing::NumericCA;
+use crate::data_process::preprocessing::{FillNullPolars, NumericCA};
 use crate::data_process::preprocessing::{ChunckedArrayFromColumn, ModaFloat, ModaInt};
 
 fn main() -> Result<(), AppError> {
@@ -38,8 +37,8 @@ fn main() -> Result<(), AppError> {
         .unwrap();
 
     println! {"prima della conversione, la tabella è così: \n {}", df.tail(Some(5)) };
-  //  let row = df.get_row(51)?;
-   // println!("{:?}", row);
+    //  let row = df.get_row(51)?;
+    // println!("{:?}", row);
 
     //let dtype = df.column("outcome")?.dtype();
     //println!("Il dtype è: {}\n", dtype);
@@ -72,85 +71,30 @@ fn main() -> Result<(), AppError> {
     df.apply(&target_name, |s| s.cast(&DataType::Int32).unwrap())?;
 
     //SEZIONE PER LA GESTIONE VALORI NULLI
-    // TODO gestire i categorici e i non
-
-    // enumerate è essenziale per ottenere l'indice della colonna
-    let cat_cols = get_dataset_info(Some(3))?.get_cat_cols().vec_to_hashset();
-    let names: Vec<String> = df
-        .get_column_names_str()
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
+   
+    
+    df.cat_num_cols_to_fill()?;
     
 
-    for (idx, name) in names.into_iter().enumerate() {
-        let s = df.column(&name)?;
-        if s.null_count() != 0 {
-            //estraiamo il tipo della colonna
-            let column_type = s.dtype();
-            //convertiamo nel chunckedArray corretto
-            let b = s.get_chuncked_array_from_column_type(column_type)?;
-            //se la colonna è categorica (cioè contenuta nell'hashset)
-            if cat_cols.contains(name.as_str()) {
-                //matchamo a seconda del chuncked array con la moda
-                match b {
-                    //fill_null per i tipi interi
-                    NumericCA::Int32(ca) => {
-                        let filled = ca.fill_null_with_values(ca.calculate_mode().unwrap())?;
-                        // usa `filled` o sostituisci la colonna
-                        df.replace_column(idx, filled)?;
-                    }
-                    //per i float
-                    NumericCA::Float64(ca) => {
-                        let filled = ca.fill_null_with_values(ca.calculate_mode().unwrap())?;
-                        df.replace_column(idx, filled)?;
-                    }
-                }
-            } else {
-                match b {
-                    //fill_null con la media per i non categorici int
-                    NumericCA::Int32(ca) => {
-                        let series_f = ca.cast(&DataType::Float64)?;
-                        let ca_f = series_f.f64()?;
-                        let mean_value = ca_f.mean().unwrap();
 
-                        let filled = ca_f.fill_null_with_values(mean_value)?;
-                        // usa `filled` o sostituisci la colonna
-                        df.replace_column(idx, filled)?;
-                    }
-                    //per i float
-                    NumericCA::Float64(ca) => {
-                        dbg!("{}",ca);
-                        let mean_i = ca.mean().unwrap();
-                        println!("questa è mean_i: {}", mean_i);
-                        let filled = ca.fill_null_with_values(mean_i)?;
-                        df.replace_column(idx, filled)?;
-                    }
-                }
-            }
-        }
-    }
 
-    // let names = has_null.get_column_names_str();
 
-    // for name in names {
 
-    //inserire logica
-    //}
+
 
     println!("{:?}", df.shape());
 
     println! {"dopo la conversione la tabella è così:\n {}",df.tail(Some(5))};
-    /* 
-    let row = df.get_row(51)?;
-    println!("{:?}", row);
-    let row2 = df.get_row(237)?;
-    println!("{:?}", row2);
-*/
+    
+        let row = df.get_row(51)?;
+        println!("{:?}", row);
+        let row2 = df.get_row(237)?;
+        println!("{:?}", row2);
+    
     //convertiamo in array2
     let df_linfa = df.to_ndarray::<Float64Type>(IndexOrder::Fortran).unwrap();
     println! {"dataframe convertito in ndarray2: \n {}", df_linfa};
-   // println! {"la riga numero 43: {:?}", df_linfa.row(41)};
+    // println! {"la riga numero 43: {:?}", df_linfa.row(41)};
 
     //quello che devi fare è una cosa molto diversa
     //TODO creare un iteratore sull'inteero dataframe per codificare correttamente i dati, distinguendo i categorici
