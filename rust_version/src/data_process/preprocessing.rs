@@ -1,12 +1,12 @@
 //libreria di funzioni per il preprocessing
 
+use ndarray::Data;
 use polars::prelude::*;
 use std::collections::HashMap;
 
 //necessario per il calcolo della moda con valori che possono
 //essere
 use ordered_float::NotNan;
-
 
 use crate::data_process::data::{VecToHash, get_dataset_info};
 //abbiamo creato l'interfaccia per un metodo per ottenere dalla colonna
@@ -100,22 +100,34 @@ impl ChunckedArrayFromColumn for Column {
         }
     }
 }
-
-pub trait FillNullPolars {
-    fn fill_dataframe_mode(&mut self, chuncked: NumericCA, idx: usize) -> Result<(), PolarsError>;
-
-    fn fill_dataframe_median(&mut self, chuncked: NumericCA, idx: usize)
-    -> Result<(), PolarsError>;
-
+//In questo modo abbiamo cat_num... accessibile in moduli esterni
+//mentre i metodi usati da quest'ultimo sono privati
+pub trait FillNullPolars: private::FillNullPolars {
     fn cat_num_cols_to_fill(&mut self) -> Result<(), PolarsError>;
+}
 
-    
+pub(crate) mod private {
+    use super::{NumericCA, PolarsError};
+    pub trait FillNullPolars {
+        fn fill_dataframe_mode(
+            &mut self,
+            chuncked: NumericCA,
+            idx: usize,
+        ) -> Result<(), PolarsError>;
+
+        fn fill_dataframe_median(
+            &mut self,
+            chuncked: NumericCA,
+            idx: usize,
+        ) -> Result<(), PolarsError>;
+    }
 }
 
 //implementazioni per riempire con la moda i float e gli int. Un'altra funzione
 //ha la responsabilità di verificare che siano categorici. Non ho trovato una
-//soluzione migliore alla duplicazione
-impl FillNullPolars for DataFrame {
+//soluzione migliore alla duplicazione. Sono tutti metodi "privati"
+impl private::FillNullPolars for DataFrame {
+    //implementazione per riempire i null con la moda
     fn fill_dataframe_mode(&mut self, chuncked: NumericCA, idx: usize) -> Result<(), PolarsError> {
         match chuncked {
             NumericCA::Int32(ca) => {
@@ -159,13 +171,19 @@ impl FillNullPolars for DataFrame {
 
         Ok(())
     }
+}
+//metodo "pubblico" per la il riempimento delle celle vuote
+impl FillNullPolars for DataFrame {
     //ritorna un vettore che contiene tutte le coppie indice e chucked array
     //da riempire
     fn cat_num_cols_to_fill(&mut self) -> Result<(), PolarsError> {
-        
-
+        //per usare le implementazioni private dei trait
+        use crate::data_process::preprocessing::private::FillNullPolars as _;
         //ottengo le colonne categoriche
-        let cat_cols = get_dataset_info(Some(3)).unwrap().get_cat_cols().vec_to_hashset();
+        let cat_cols = get_dataset_info(Some(3))
+            .unwrap()
+            .get_cat_cols()
+            .vec_to_hashset();
         //ottengo il nome delle colonne categoriche
         let df_i = self.clone();
         let names: Vec<String> = df_i
@@ -180,12 +198,36 @@ impl FillNullPolars for DataFrame {
             if s.null_count() != 0 && cat_cols.contains(name.as_str()) {
                 let chuncked = s.get_chuncked_array_from_column_type(s.dtype())?;
                 self.fill_dataframe_mode(chuncked, idx)?;
-            }else {
+            } else {
                 let chuncked = s.get_chuncked_array_from_column_type(s.dtype())?;
                 self.fill_dataframe_median(chuncked, idx)?;
-                
             }
         }
         Ok(())
     }
 }
+
+pub trait Normalization {
+    //da implementare con apply
+    fn std_scaler(&mut self, column_name: &str) -> Result<(), PolarsError>;
+}
+
+impl Normalization for DataFrame {
+    //questo metodo si aspetta che i dati siano già convertiti in un tipo float
+    //calcola lo standard scalar, ossia ogni numero di una colonna numerica
+    //viene convertito di modo che abbia media 0 e std 1.
+    fn std_scaler(&mut self, column_name: &str) -> Result<(), PolarsError> {
+        //calcolo della deviazione standard della colonna. Lo "0" è un parametro che indica la deviazione standard della popolazione
+        let col = self[column_name].as_materialized_series();
+        //ddof deve essere 0 per coerenza con scikit-learn della controparte python
+        let col_std = &col.std(0).unwrap();
+        //calcolo della media della colonna
+        let col_mean = &col.mean().unwrap();
+
+        self.apply(column_name, |s| s - col_mean / col_std)?;
+
+        Ok(())
+    }
+}
+
+

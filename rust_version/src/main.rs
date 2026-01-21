@@ -11,10 +11,9 @@ use polars::prelude::*;
 
 pub mod data_process;
 
-use crate::data_process::data::{VecToHash, get_dataset_info};
+use crate::data_process::data::get_dataset_info;
 use crate::data_process::errors::AppError;
-use crate::data_process::preprocessing::{FillNullPolars, NumericCA};
-use crate::data_process::preprocessing::{ChunckedArrayFromColumn, ModaFloat, ModaInt};
+use crate::data_process::preprocessing::{FillNullPolars, Normalization};
 
 fn main() -> Result<(), AppError> {
     configure_the_environment();
@@ -71,26 +70,23 @@ fn main() -> Result<(), AppError> {
     df.apply(&target_name, |s| s.cast(&DataType::Int32).unwrap())?;
 
     //SEZIONE PER LA GESTIONE VALORI NULLI
-   
-    
+
     df.cat_num_cols_to_fill()?;
-    
 
+    df.std_scaler("Time_min")?;
 
-
-
-
-
+    let dummies = df["Functional_status"].as_materialized_series().to_dummies(Some("_"), false, false).unwrap();
+    println!("{}", dummies);
 
     println!("{:?}", df.shape());
 
     println! {"dopo la conversione la tabella è così:\n {}",df.tail(Some(5))};
-    
-        let row = df.get_row(51)?;
-        println!("{:?}", row);
-        let row2 = df.get_row(237)?;
-        println!("{:?}", row2);
-    
+
+    let row = df.get_row(51)?;
+    println!("{:?}", row);
+    let row2 = df.get_row(237)?;
+    println!("{:?}", row2);
+
     //convertiamo in array2
     let df_linfa = df.to_ndarray::<Float64Type>(IndexOrder::Fortran).unwrap();
     println! {"dataframe convertito in ndarray2: \n {}", df_linfa};
