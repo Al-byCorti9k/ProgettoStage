@@ -13,7 +13,7 @@ pub mod data_process;
 
 use crate::data_process::data::get_dataset_info;
 use crate::data_process::errors::AppError;
-use crate::data_process::preprocessing::{FillNullPolars, Normalization};
+use crate::data_process::preprocessing::{ColumnsTypeConvertion, FillNullPolars, ScalerEncoder};
 
 fn main() -> Result<(), AppError> {
     configure_the_environment();
@@ -63,20 +63,29 @@ fn main() -> Result<(), AppError> {
     let target_name = sample_col_names.swap_remove(target_index);
 
     // TODO chiamata alla funzione di preprocessing
-
+    /* 
     for name in sample_col_names {
         df.apply(&name, |s| s.cast(&DataType::Float64).unwrap())?;
     }
     df.apply(&target_name, |s| s.cast(&DataType::Int32).unwrap())?;
-
+    */
     //SEZIONE PER LA GESTIONE VALORI NULLI
+    df.sample_target_convertion(3, &target_name)?;
 
     df.cat_num_cols_to_fill()?;
 
-    df.std_scaler("Time_min")?;
+    
+    //TEST ONE-HOT-ENCODING
 
-    let dummies = df["Functional_status"].as_materialized_series().to_dummies(Some("_"), false, false).unwrap();
+    /* 
+    let binding = dummies.clone();
+    let  names64 = binding.get_column_names_str();
+    for name in names64 {
+        dummies.apply(&name, |s| s.cast(&DataType::Float64).unwrap())?;}
+
     println!("{}", dummies);
+    */
+    // ONE-HOT ENCODING
 
     println!("{:?}", df.shape());
 
@@ -86,6 +95,10 @@ fn main() -> Result<(), AppError> {
     println!("{:?}", row);
     let row2 = df.get_row(237)?;
     println!("{:?}", row2);
+
+    let df1 = df.scaler_encoder_df(3)?;
+
+    println!{"dopo one-hot-encoding e il resto è così: \n {}", df1.tail(Some(5)) }
 
     //convertiamo in array2
     let df_linfa = df.to_ndarray::<Float64Type>(IndexOrder::Fortran).unwrap();

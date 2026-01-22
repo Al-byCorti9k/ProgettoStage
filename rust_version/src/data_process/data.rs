@@ -103,12 +103,26 @@ pub trait VecToHash {
      fn vec_to_hashset(&self) -> HashSet<&'static str>;
 }
 
+pub trait VecToHashSet {
+    fn vec_to_hashset(&self) -> HashSet<&str>;
+
+}
+
 impl VecToHash for &'static [&'static str]{
    fn vec_to_hashset(&self) -> HashSet<&'static str> {
         self.iter()
              .copied()
              .collect()
 }
+}
+
+impl VecToHashSet for Vec<&str> {
+    fn vec_to_hashset(&self) -> HashSet<&str> {
+         self.iter()
+             .copied()
+             .collect()
+    }
+    
 }
 
 #[cfg(test)]
