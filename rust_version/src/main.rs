@@ -7,7 +7,8 @@ use std::path::Path;
 
 use polars::prelude::*;
 
-//use ndarray::Array2;
+use ndarray::Array2;
+use ndarray::Array1;
 
 pub mod data_process;
 
@@ -36,23 +37,10 @@ fn main() -> Result<(), AppError> {
         .unwrap();
 
     println! {"prima della conversione, la tabella è così: \n {}", df.tail(Some(5)) };
-    //  let row = df.get_row(51)?;
-    // println!("{:?}", row);
-
-    //let dtype = df.column("outcome")?.dtype();
-    //println!("Il dtype è: {}\n", dtype);
-
-    //Conversione del dataframe di Polars in Array1 (target) e Array2(addestramento) per
-    //addestrare un modello di regressione logistica con "linfa"
-
-    //conversione Array1
 
     //questo passaggio converte tutti dati dell'ultima colonna in i32
     let target_index = df.shape().1 - 1;
 
-    //l'obiettivo adesso è quello di creare una funzione che converta i dati in f64
-    //qui ho avuto un problema perchè apply richeide un riferimento mutabile
-    //mentre get_column_names() restituisce una stringa slice, che sappiamo essere di tipo &str (immutabile)
     //creo un iteratore, poi mappo su ogni elemento la chiusura che converte in stringa, dopo converto nella collezione
     let mut sample_col_names: Vec<String> = df
         .get_column_names()
@@ -62,30 +50,9 @@ fn main() -> Result<(), AppError> {
     //ottengo il nome della colonna di interesse. In questo caso l'ultima
     let target_name = sample_col_names.swap_remove(target_index);
 
-    // TODO chiamata alla funzione di preprocessing
-    /* 
-    for name in sample_col_names {
-        df.apply(&name, |s| s.cast(&DataType::Float64).unwrap())?;
-    }
-    df.apply(&target_name, |s| s.cast(&DataType::Int32).unwrap())?;
-    */
-    //SEZIONE PER LA GESTIONE VALORI NULLI
     df.sample_target_convertion(3, &target_name)?;
 
     df.cat_num_cols_to_fill()?;
-
-    
-    //TEST ONE-HOT-ENCODING
-
-    /* 
-    let binding = dummies.clone();
-    let  names64 = binding.get_column_names_str();
-    for name in names64 {
-        dummies.apply(&name, |s| s.cast(&DataType::Float64).unwrap())?;}
-
-    println!("{}", dummies);
-    */
-    // ONE-HOT ENCODING
 
     println!("{:?}", df.shape());
 
@@ -96,25 +63,25 @@ fn main() -> Result<(), AppError> {
     let row2 = df.get_row(237)?;
     println!("{:?}", row2);
 
-    let df1 = df.scaler_encoder_df(3)?;
+    //dopo le conversioni, estraggo la colonna target dal dataframe originale
+    //let v1 = df.column(&target_name)?;
+    let target_cols: Vec<i32> = df.column(&target_name)?.i32()?.into_no_null_iter().collect();
+    //let target_cols = DataFrame::new(vec![v1.clone()])?;
+    //println!("stampiamo {}", target_cols.tail(Some(5)));
+    df.drop_in_place(&target_name)?;
 
-    println!{"dopo one-hot-encoding e il resto è così: \n {}", df1.tail(Some(5)) }
+    println!("stampiamo dopo il drop \n {}", df.tail(Some(5)));
+
+    let sample_cols = df.scaler_encoder_df(3, &target_name)?;
+
+    println!{"dopo one-hot-encoding e il resto è così: \n {}", sample_cols.tail(Some(5)) };
 
     //convertiamo in array2
-    let df_linfa = df.to_ndarray::<Float64Type>(IndexOrder::Fortran).unwrap();
-    println! {"dataframe convertito in ndarray2: \n {}", df_linfa};
-    // println! {"la riga numero 43: {:?}", df_linfa.row(41)};
-
-    //quello che devi fare è una cosa molto diversa
-    //TODO creare un iteratore sull'inteero dataframe per codificare correttamente i dati, distinguendo i categorici
-    //dai non categorici
-    //per questa parte puoi usare senza problemi gli iteratori
-    //TODO quando devi usare linfa, usa to_ndarray, ma lo usi per convertire i dati; ad esempio, per i samples
-    //converti in array2<f64> per la colonna target in array2<i32> dalla quale poi estrai l'array array1<i32> che ti serve per linfa!
-
-    //let y: Vec<i32> = new_column_i32.collect();
-
-    //let y = Array1::from(y);
+    let sample_cols = sample_cols.to_ndarray::<Float64Type>(IndexOrder::Fortran).unwrap();
+    //covertiamo in array1
+    let target_col = Array1::from(target_cols);
+    
+    //TODO Interazione Main con linfa per l'addestramento
 
     println! {"il dataset che ho selezionato è: {}\n", get_dataset_info(Some(2))?.get_csv() };
 
