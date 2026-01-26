@@ -7,14 +7,17 @@ use std::path::Path;
 
 use polars::prelude::*;
 
-use ndarray::Array2;
-use ndarray::Array1;
+//use ndarray::Array2;
+use ndarray::{Array1, ArrayView1, ArrayView2};
+use std::any::type_name;
 
 pub mod data_process;
+pub mod machine_learning;
 
 use crate::data_process::data::get_dataset_info;
 use crate::data_process::errors::AppError;
 use crate::data_process::preprocessing::{ColumnsTypeConvertion, FillNullPolars, ScalerEncoder};
+use crate::machine_learning::validation::leave_one_out_cross_validation;
 
 fn main() -> Result<(), AppError> {
     configure_the_environment();
@@ -65,7 +68,11 @@ fn main() -> Result<(), AppError> {
 
     //dopo le conversioni, estraggo la colonna target dal dataframe originale
     //let v1 = df.column(&target_name)?;
-    let target_cols: Vec<i32> = df.column(&target_name)?.i32()?.into_no_null_iter().collect();
+    let target_cols: Vec<i32> = df
+        .column(&target_name)?
+        .i32()?
+        .into_no_null_iter()
+        .collect();
     //let target_cols = DataFrame::new(vec![v1.clone()])?;
     //println!("stampiamo {}", target_cols.tail(Some(5)));
     df.drop_in_place(&target_name)?;
@@ -74,13 +81,24 @@ fn main() -> Result<(), AppError> {
 
     let sample_cols = df.scaler_encoder_df(3, &target_name)?;
 
-    println!{"dopo one-hot-encoding e il resto è così: \n {}", sample_cols.tail(Some(5)) };
+    println! {"dopo one-hot-encoding e il resto è così: \n {}", sample_cols.tail(Some(5)) };
 
     //convertiamo in array2
-    let sample_cols = sample_cols.to_ndarray::<Float64Type>(IndexOrder::Fortran).unwrap();
+
+    let sample_cols = sample_cols
+        .to_ndarray::<Float64Type>(IndexOrder::Fortran)
+        .unwrap();
+
+    let sample_cols = ArrayView2::from(&sample_cols);
+
     //covertiamo in array1
     let target_col = Array1::from(target_cols);
-    
+
+    let target_col = ArrayView1::from(&target_col);
+
+    let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col)?;
+   
+
     //TODO Interazione Main con linfa per l'addestramento
 
     println! {"il dataset che ho selezionato è: {}\n", get_dataset_info(Some(2))?.get_csv() };
@@ -99,4 +117,8 @@ pub fn configure_the_environment() {
         env::set_var("POLARS_FMT_MAX_ROWS", "10"); // stesso ma per le righe
         env::set_var("POLARS_FMT_STR_LEN", "50"); // numero massimo di caratteri per stringhe stampati
     }
+}
+
+fn print_type_of<T>(_: &T) {
+    println!("{}", type_name::<T>());
 }

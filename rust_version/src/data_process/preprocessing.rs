@@ -1,6 +1,5 @@
 //libreria di funzioni per il preprocessing
 
-
 use polars::prelude::*;
 use std::collections::HashMap;
 
@@ -10,7 +9,8 @@ use ordered_float::NotNan;
 
 use crate::data_process::{
     data::{VecToHash, VecToHashSet, get_dataset_info},
-    errors::AppError, preprocessing::private::ScalersEncoders,
+    errors::AppError,
+    preprocessing::private::ScalersEncoders,
 };
 
 //funzione per la conversione dei samples in f64 e del target in i32
@@ -209,7 +209,11 @@ pub(crate) mod private {
         fn to_dummies_f64(&mut self, column_name: &str) -> Result<DataFrame, PolarsError>;
 
         //per costruire il dataframe finale
-        fn finalization(&mut self, hash_set: &HashSet<&str>, df: &DataFrame) -> Result<DataFrame, AppError>;
+        fn finalization(
+            &mut self,
+            hash_set: &HashSet<&str>,
+            df: &DataFrame,
+        ) -> Result<DataFrame, AppError>;
     }
 }
 
@@ -314,32 +318,40 @@ impl FillNullPolars for DataFrame {
 }
 
 pub trait ScalerEncoder: private::ScalersEncoders {
-
-    fn scaler_encoder_df(&mut self, index: usize, target_column: &str) -> Result< DataFrame, AppError>;
+    fn scaler_encoder_df(
+        &mut self,
+        index: usize,
+        target_column: &str,
+    ) -> Result<DataFrame, AppError>;
 }
 
 impl ScalerEncoder for DataFrame {
-    fn scaler_encoder_df(&mut self, index: usize, target_column: &str) -> Result< DataFrame, AppError> {
+    fn scaler_encoder_df(
+        &mut self,
+        index: usize,
+        target_column: &str,
+    ) -> Result<DataFrame, AppError> {
         //genero un dataframe vuoto iniziale
         let mut df = DataFrame::default();
         //ottengo il nome di tutte le colonne
         let binding = self.clone();
         let column_names = binding.get_column_names_str();
         //ottengo il nome delle colonne categoriche
-        let mut cat_col_names = get_dataset_info(Some(index))?.get_cat_cols().vec_to_hashset();
+        let mut cat_col_names = get_dataset_info(Some(index))?
+            .get_cat_cols()
+            .vec_to_hashset();
         //elimino la colonna target dall'hashset
         cat_col_names.remove(target_column);
 
-        for col_name in column_names{
-            if cat_col_names.contains(col_name){
-                 df = df.hstack(&self.to_dummies_f64(col_name)?.get_columns())?;
-            }else {
+        for col_name in column_names {
+            if cat_col_names.contains(col_name) {
+                df = df.hstack(&self.to_dummies_f64(col_name)?.get_columns())?;
+            } else {
                 self.std_scaler(col_name)?;
             }
         }
         let finalized = self.finalization(&cat_col_names, &df)?;
         Ok(finalized)
-        
     }
 }
 
@@ -377,17 +389,19 @@ impl private::ScalersEncoders for DataFrame {
         Ok(dummies)
     }
     //costruisce il dataframe finale
-    fn finalization(&mut self, hash_set: &std::collections::HashSet<&str>, df: &DataFrame) -> Result<DataFrame, AppError> {
+    fn finalization(
+        &mut self,
+        hash_set: &std::collections::HashSet<&str>,
+        df: &DataFrame,
+    ) -> Result<DataFrame, AppError> {
         //dal dataframe originale elimina le colonne categoriche
-        for key in hash_set{
+        for key in hash_set {
             self.drop_in_place(key)?;
         }
         //concateno il le colonne non cat del dataframe originale
-        //con le one-hot encoded 
-        let finalized =self.hstack(df.get_columns())?;
+        //con le one-hot encoded
+        let finalized = self.hstack(df.get_columns())?;
         //restituisco un dataframe che rappresenta i samples
         Ok(finalized)
-
     }
-    }
-
+}
