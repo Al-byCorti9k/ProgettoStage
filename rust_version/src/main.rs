@@ -6,9 +6,9 @@ use std::env;
 use std::path::Path;
 
 use polars::prelude::*;
-
+use linfa::prelude::*;
 //use ndarray::Array2;
-use ndarray::{Array1, ArrayView1, ArrayView2};
+use ndarray::{Array1, ArrayView1, ArrayView2,array};
 use std::any::type_name;
 
 pub mod data_process;
@@ -17,7 +17,7 @@ pub mod machine_learning;
 use crate::data_process::data::get_dataset_info;
 use crate::data_process::errors::AppError;
 use crate::data_process::preprocessing::{ColumnsTypeConvertion, FillNullPolars, ScalerEncoder};
-use crate::machine_learning::validation::leave_one_out_cross_validation;
+use crate::machine_learning::validation::{get_mcc, leave_one_out_cross_validation};
 
 fn main() -> Result<(), AppError> {
     configure_the_environment();
@@ -96,8 +96,20 @@ fn main() -> Result<(), AppError> {
 
     let target_col = ArrayView1::from(&target_col);
 
-    let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col)?;
-   
+    //let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col)?;
+
+    //let original = ArrayView1::from(&original);
+    //let prediction = ArrayView1::from(&prediction);
+    //let mcc = get_mcc(original, prediction)?;
+
+    // create dummy classes 0 and 1
+    let prediction = array![0, 1, 1, 1, 0, 0, 1];
+    let ground_truth = array![0, 0, 1, 0, 1, 0, 1];
+
+    // create confusion matrix
+    let cm = prediction.confusion_matrix(&ground_truth).unwrap();
+
+    println!("il valore di mcc è: {}", cm.mcc());
 
     //TODO Interazione Main con linfa per l'addestramento
 

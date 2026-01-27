@@ -10,7 +10,9 @@ pub enum AppError {
     Polars(PolarsError),
     Dataset(DatasetError),
     Io(io::Error),
-    Linfa(linfa_logistic::error::Error),
+    LinfaLogistic(linfa_logistic::error::Error),
+    Linfa(linfa::Error),
+
 }
 
 impl From<PolarsError> for AppError {
@@ -33,6 +35,12 @@ impl From<io::Error> for AppError {
 
 impl From<linfa_logistic::error::Error> for AppError {
     fn from(e: linfa_logistic::error::Error) -> Self {
+        AppError::LinfaLogistic(e)
+    }
+}
+
+impl From<linfa::Error> for AppError {
+    fn from(e: linfa::Error) -> Self {
         AppError::Linfa(e)
     }
 }
