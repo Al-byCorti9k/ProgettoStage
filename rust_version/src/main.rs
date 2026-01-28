@@ -5,11 +5,14 @@
 use std::env;
 use std::path::Path;
 
-use polars::prelude::*;
 use linfa::prelude::*;
+use polars::prelude::*;
 //use ndarray::Array2;
-use ndarray::{Array1, ArrayView1, ArrayView2,array};
+use ndarray::{Array1, ArrayView1, ArrayView2, Axis};
+use polars_core::prelude::*;
+use polars_io::prelude::*;
 use std::any::type_name;
+use std::fs::File;
 
 pub mod data_process;
 pub mod machine_learning;
@@ -45,8 +48,8 @@ fn main() -> Result<(), AppError> {
     let target_index = df.shape().1 - 1;
 
     //creo un iteratore, poi mappo su ogni elemento la chiusura che converte in stringa, dopo converto nella collezione
-    let mut sample_col_names: Vec<String> = df
-        .get_column_names()
+    
+    let mut sample_col_names: Vec<String> = df.get_column_names()
         .iter()
         .map(|s| s.to_string())
         .collect();
@@ -54,6 +57,59 @@ fn main() -> Result<(), AppError> {
     let target_name = sample_col_names.swap_remove(target_index);
 
     df.sample_target_convertion(3, &target_name)?;
+
+    let samples = df.to_ndarray::<Float64Type>(IndexOrder::Fortran).unwrap();
+    println!(
+        "il dataframe convertito in ndarray con i valori nulli\n{:?}",
+        samples
+    );
+    println!("dopo la conversione in ndarray, ecco cosa succede ai valori nulli:\n");
+    let row = samples.row(51);
+    println!("{:?}", row);
+    let row2 = samples.row(233);
+    println!("{:?}", row2);
+
+    let targets = Array1::<i32>::zeros(422);
+    //proviamo a creare un dataset linfa dall'ndarray trovato
+    let dataset = Dataset::new(samples, targets);
+
+    //proviamo a riconvertire in ndarray il dataset linfa
+    let records = dataset.records().to_owned();
+
+    //proviamo a passare dall'arraybase al dataframe polars
+    let mut columns = Vec::new();
+
+    for (i, col) in records.axis_iter(Axis(1)).enumerate() {
+        let series = Column::new(format!("col_{}", i).into(), col.to_vec());
+        columns.push(series);
+    }
+    //questa sezione serve per mantenere i null value che si perdono nella conversione
+    let df69 = DataFrame::new(columns)?;
+    let mut ruf = df69.clone();
+    for name in df69.get_column_names() {
+    let s = ruf.column(name)?;
+
+    if matches!(s.dtype(), DataType::Float32 | DataType::Float64) {
+        let new_s = s
+            .f64()?
+            .apply(|opt_v| opt_v.and_then(|v| if v.is_nan() { None } else { Some(v) }))
+            .into_series()
+            .rename(name.clone())
+            .to_owned();
+
+        ruf.replace(name, new_s)?;
+    }
+}
+
+
+
+    println! {"stampiamo il dataframe riconvertito\n {}", df69.tail(Some(5))};
+
+    //mi aspetto di ritrovarmi le righe ancora con i null
+    let row = ruf.get_row(51)?;
+    println!("{:?}", row);
+    let row2 = ruf.get_row(233)?;
+    println!("{:?}", row2);
 
     df.cat_num_cols_to_fill()?;
 
@@ -63,7 +119,7 @@ fn main() -> Result<(), AppError> {
 
     let row = df.get_row(51)?;
     println!("{:?}", row);
-    let row2 = df.get_row(237)?;
+    let row2 = df.get_row(233)?;
     println!("{:?}", row2);
 
     //dopo le conversioni, estraggo la colonna target dal dataframe originale
@@ -73,8 +129,7 @@ fn main() -> Result<(), AppError> {
         .i32()?
         .into_no_null_iter()
         .collect();
-    //let target_cols = DataFrame::new(vec![v1.clone()])?;
-    //println!("stampiamo {}", target_cols.tail(Some(5)));
+
     df.drop_in_place(&target_name)?;
 
     println!("stampiamo dopo il drop \n {}", df.tail(Some(5)));
@@ -102,18 +157,23 @@ fn main() -> Result<(), AppError> {
     //let prediction = ArrayView1::from(&prediction);
     //let mcc = get_mcc(original, prediction)?;
 
-    // create dummy classes 0 and 1
-    let prediction = array![0, 1, 1, 1, 0, 0, 1];
-    let ground_truth = array![0, 0, 1, 0, 1, 0, 1];
+    //SEZIONE PER IL CSV NON SERVE AL MOMENTO
+    /*
+    let s1 = Column::new("rust_pred".into(), prediction);
+    let mut df4  = DataFrame::new(vec![s1])?;
+    let mut file = File::create("example.csv").expect("could not create file");
+    CsvWriter::new(&mut file)
+    .finish(&mut df4)?;
+    */
 
     // create confusion matrix
-    let cm = prediction.confusion_matrix(&ground_truth).unwrap();
+    // let cm = prediction.confusion_matrix(&ground_truth).unwrap();
 
-    println!("il valore di mcc è: {}", cm.mcc());
+    //println!("il valore di mcc è: {}", cm.mcc());
 
     //TODO Interazione Main con linfa per l'addestramento
 
-    println! {"il dataset che ho selezionato è: {}\n", get_dataset_info(Some(2))?.get_csv() };
+    println! {"il dataset che ho selezionato è: {}\n", get_dataset_info(Some(3))?.get_csv() };
 
     Ok(())
 }

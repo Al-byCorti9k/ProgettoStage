@@ -13,12 +13,13 @@ pub fn leave_one_out_cross_validation<'a>(
 ) -> Result<(Vec<i32>, Vec<i32>), AppError> {
     let dataset = DatasetView::new(samples, target);
 
+
     let n: usize = dataset.nsamples();
 
     let mut y_true: Vec<i32> = Vec::with_capacity(n);
     let mut y_pred: Vec<i32> = Vec::with_capacity(n);
     //effettuo il folding, cioè addestro con logistic regression con LOOCV
-    //let mut c = 0;
+    
     //TODO test da effettuare. sembra vada in loop infinito
     for (train, valid) in dataset.fold(n) {
         let model = LogisticRegression::default()
@@ -31,8 +32,7 @@ pub fn leave_one_out_cross_validation<'a>(
         y_true.push(valid.targets()[0]);
         y_pred.push(pred[0]);
 
-        // c += 1;
-        // println!("fold {}", c);
+        
     }
     Ok((y_true, y_pred))
 }
