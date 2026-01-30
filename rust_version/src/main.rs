@@ -43,6 +43,7 @@ fn main() -> Result<(), AppError> {
         .unwrap();
 
     println! {"prima della conversione, la tabella è così: \n {}", df.tail(Some(5)) };
+    
 
     //questo passaggio converte tutti dati dell'ultima colonna in i32
     let target_index = df.shape().1 - 1;
@@ -58,58 +59,12 @@ fn main() -> Result<(), AppError> {
 
     df.sample_target_convertion(3, &target_name)?;
 
-    let samples = df.to_ndarray::<Float64Type>(IndexOrder::Fortran).unwrap();
-    println!(
-        "il dataframe convertito in ndarray con i valori nulli\n{:?}",
-        samples
-    );
-    println!("dopo la conversione in ndarray, ecco cosa succede ai valori nulli:\n");
-    let row = samples.row(51);
-    println!("{:?}", row);
-    let row2 = samples.row(233);
-    println!("{:?}", row2);
+    //INIZIO TEST PER COMPATIBILITA' DATASET-DATAFRAME
 
-    let targets = Array1::<i32>::zeros(422);
-    //proviamo a creare un dataset linfa dall'ndarray trovato
-    let dataset = Dataset::new(samples, targets);
-
-    //proviamo a riconvertire in ndarray il dataset linfa
-    let records = dataset.records().to_owned();
-
-    //proviamo a passare dall'arraybase al dataframe polars
-    let mut columns = Vec::new();
-
-    for (i, col) in records.axis_iter(Axis(1)).enumerate() {
-        let series = Column::new(format!("col_{}", i).into(), col.to_vec());
-        columns.push(series);
-    }
-    //questa sezione serve per mantenere i null value che si perdono nella conversione
-    let df69 = DataFrame::new(columns)?;
-    let mut ruf = df69.clone();
-    for name in df69.get_column_names() {
-    let s = ruf.column(name)?;
-
-    if matches!(s.dtype(), DataType::Float32 | DataType::Float64) {
-        let new_s = s
-            .f64()?
-            .apply(|opt_v| opt_v.and_then(|v| if v.is_nan() { None } else { Some(v) }))
-            .into_series()
-            .rename(name.clone())
-            .to_owned();
-
-        ruf.replace(name, new_s)?;
-    }
-}
+  
+    //FINE SEZIONE TEST CONVERSIONE 
 
 
-
-    println! {"stampiamo il dataframe riconvertito\n {}", df69.tail(Some(5))};
-
-    //mi aspetto di ritrovarmi le righe ancora con i null
-    let row = ruf.get_row(51)?;
-    println!("{:?}", row);
-    let row2 = ruf.get_row(233)?;
-    println!("{:?}", row2);
 
     df.cat_num_cols_to_fill()?;
 

@@ -2,7 +2,7 @@ use linfa::prelude::*;
 use linfa_logistic::LogisticRegression;
 use ndarray::{ArrayView1, ArrayView2};
 
-use crate::data_process::errors::AppError;
+use crate::data_process::{errors::AppError, fold_processing::fold_dataset_preprocessing};
 
 //metodo pubblico che riceve in input i samples
 // e il target nel formato ndarray e restituisce
@@ -10,18 +10,20 @@ use crate::data_process::errors::AppError;
 pub fn leave_one_out_cross_validation<'a>(
     samples: ArrayView2<'a, f64>,
     target: ArrayView1<'a, i32>,
+    target_name: &str
 ) -> Result<(Vec<i32>, Vec<i32>), AppError> {
     let dataset = DatasetView::new(samples, target);
 
-
+    
     let n: usize = dataset.nsamples();
 
     let mut y_true: Vec<i32> = Vec::with_capacity(n);
     let mut y_pred: Vec<i32> = Vec::with_capacity(n);
     //effettuo il folding, cioè addestro con logistic regression con LOOCV
     
-    //TODO test da effettuare. sembra vada in loop infinito
     for (train, valid) in dataset.fold(n) {
+        //TODO RIPRENDI DA QUA
+        let train = fold_dataset_preprocessing(dataset, target_name)?;
         let model = LogisticRegression::default()
             .max_iterations(50)
             .with_intercept(true)
