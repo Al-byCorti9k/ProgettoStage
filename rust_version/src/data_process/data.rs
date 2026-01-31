@@ -128,6 +128,7 @@ mod tests {
 
     #[test]
     fn test_conversione_to_hashset() -> Result<(), AppError> {
+        use polars::prelude::*;
         let pippo = get_dataset_info(Some(0))?.get_cat_cols();
         let franco = pippo.vec_to_hashset();
 
@@ -135,6 +136,8 @@ mod tests {
         assert_eq!("sex_woman", prova);
         let owner = get_dataset_info(Some(0))?.get_cat_cols()[0];
         assert_eq!("sex_woman", owner);
+
+       
         Ok(())
     }
 }

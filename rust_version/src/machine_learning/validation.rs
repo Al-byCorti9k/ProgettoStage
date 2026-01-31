@@ -10,11 +10,11 @@ use crate::data_process::{errors::AppError, fold_processing::fold_dataset_prepro
 pub fn leave_one_out_cross_validation<'a>(
     samples: ArrayView2<'a, f64>,
     target: ArrayView1<'a, i32>,
-    target_name: &str
+    target_name: &str,
+    sample_col_names: &Vec<String>
 ) -> Result<(Vec<i32>, Vec<i32>), AppError> {
     let dataset = DatasetView::new(samples, target);
 
-    
     let n: usize = dataset.nsamples();
 
     let mut y_true: Vec<i32> = Vec::with_capacity(n);
@@ -22,8 +22,13 @@ pub fn leave_one_out_cross_validation<'a>(
     //effettuo il folding, cioè addestro con logistic regression con LOOCV
     
     for (train, valid) in dataset.fold(n) {
-        //TODO RIPRENDI DA QUA
-        let train = fold_dataset_preprocessing(dataset, target_name)?;
+        println!("stampiamo train \n {:?}", train);
+        println!("stampiamo valid \n {:?}", valid);
+        //Train contiene k-1 fold, valid i restanti
+        //ricorda che i fold sono gruppi di righe
+        let train = fold_dataset_preprocessing(train.view(), target_name, sample_col_names)?;
+       let valid = fold_dataset_preprocessing(valid.view(), target_name, sample_col_names)?;
+        //addestriamo il modello
         let model = LogisticRegression::default()
             .max_iterations(50)
             .with_intercept(true)
@@ -32,9 +37,7 @@ pub fn leave_one_out_cross_validation<'a>(
         let pred = model.predict(&valid);
         //target è un metodo di datasetView, ritorna un reference al field targets
         y_true.push(valid.targets()[0]);
-        y_pred.push(pred[0]);
-
-        
+        y_pred.push(pred[0]);      
     }
     Ok((y_true, y_pred))
 }

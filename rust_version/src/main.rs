@@ -45,7 +45,7 @@ fn main() -> Result<(), AppError> {
     println! {"prima della conversione, la tabella è così: \n {}", df.tail(Some(5)) };
     
 
-    //questo passaggio converte tutti dati dell'ultima colonna in i32
+    //ottengo l'indice della colonna target
     let target_index = df.shape().1 - 1;
 
     //creo un iteratore, poi mappo su ogni elemento la chiusura che converte in stringa, dopo converto nella collezione
@@ -55,8 +55,9 @@ fn main() -> Result<(), AppError> {
         .map(|s| s.to_string())
         .collect();
     //ottengo il nome della colonna di interesse. In questo caso l'ultima
-    let target_name = sample_col_names.swap_remove(target_index);
-
+    let target_name = sample_col_names.remove(target_index);
+   
+    //converto i sample in f64, il target in i32
     df.sample_target_convertion(3, &target_name)?;
 
     //INIZIO TEST PER COMPATIBILITA' DATASET-DATAFRAME
@@ -66,19 +67,18 @@ fn main() -> Result<(), AppError> {
 
 
 
-    df.cat_num_cols_to_fill()?;
-
-    println!("{:?}", df.shape());
+    //df.cat_num_cols_to_fill()?;
 
     println! {"dopo la conversione la tabella è così:\n {}",df.tail(Some(5))};
-
+    /* 
     let row = df.get_row(51)?;
     println!("{:?}", row);
     let row2 = df.get_row(233)?;
     println!("{:?}", row2);
+    */
 
+    
     //dopo le conversioni, estraggo la colonna target dal dataframe originale
-    //let v1 = df.column(&target_name)?;
     let target_cols: Vec<i32> = df
         .column(&target_name)?
         .i32()?
@@ -88,14 +88,15 @@ fn main() -> Result<(), AppError> {
     df.drop_in_place(&target_name)?;
 
     println!("stampiamo dopo il drop \n {}", df.tail(Some(5)));
+    let serie = Series::new_null("pippo".into(), 8);
+    serie.to_dummies(separator, drop_first, drop_nulls)?;
+    //let sample_cols = df.scaler_encoder_df(3, &target_name)?;
 
-    let sample_cols = df.scaler_encoder_df(3, &target_name)?;
-
-    println! {"dopo one-hot-encoding e il resto è così: \n {}", sample_cols.tail(Some(5)) };
+    //println! {"dopo one-hot-encoding e il resto è così: \n {}", sample_cols.tail(Some(5)) };
 
     //convertiamo in array2
 
-    let sample_cols = sample_cols
+    let sample_cols = df
         .to_ndarray::<Float64Type>(IndexOrder::Fortran)
         .unwrap();
 
@@ -105,12 +106,12 @@ fn main() -> Result<(), AppError> {
     let target_col = Array1::from(target_cols);
 
     let target_col = ArrayView1::from(&target_col);
+    //cross validation
+   // let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col, &target_name, &sample_col_names)?;
 
-    //let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col)?;
-
-    //let original = ArrayView1::from(&original);
-    //let prediction = ArrayView1::from(&prediction);
-    //let mcc = get_mcc(original, prediction)?;
+ //   let original = ArrayView1::from(&original);
+//    let prediction = ArrayView1::from(&prediction);
+   // let mcc = get_mcc(original, prediction)?;
 
     //SEZIONE PER IL CSV NON SERVE AL MOMENTO
     /*
@@ -124,11 +125,12 @@ fn main() -> Result<(), AppError> {
     // create confusion matrix
     // let cm = prediction.confusion_matrix(&ground_truth).unwrap();
 
-    //println!("il valore di mcc è: {}", cm.mcc());
+  //  println!("il valore di mcc è: {}", mcc);
 
     //TODO Interazione Main con linfa per l'addestramento
 
     println! {"il dataset che ho selezionato è: {}\n", get_dataset_info(Some(3))?.get_csv() };
+
 
     Ok(())
 }
