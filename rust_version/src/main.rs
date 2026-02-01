@@ -8,7 +8,7 @@ use std::path::Path;
 use linfa::prelude::*;
 use polars::prelude::*;
 //use ndarray::Array2;
-use ndarray::{Array1, ArrayView1, ArrayView2, Axis};
+use ndarray::{Array1, ArrayView1, ArrayView2, Axis, Data};
 use polars_core::prelude::*;
 use polars_io::prelude::*;
 use std::any::type_name;
@@ -43,41 +43,37 @@ fn main() -> Result<(), AppError> {
         .unwrap();
 
     println! {"prima della conversione, la tabella è così: \n {}", df.tail(Some(5)) };
-    
 
     //ottengo l'indice della colonna target
     let target_index = df.shape().1 - 1;
 
     //creo un iteratore, poi mappo su ogni elemento la chiusura che converte in stringa, dopo converto nella collezione
-    
-    let mut sample_col_names: Vec<String> = df.get_column_names()
+
+    let mut sample_col_names: Vec<String> = df
+        .get_column_names()
         .iter()
         .map(|s| s.to_string())
         .collect();
     //ottengo il nome della colonna di interesse. In questo caso l'ultima
     let target_name = sample_col_names.remove(target_index);
-   
+
     //converto i sample in f64, il target in i32
     df.sample_target_convertion(3, &target_name)?;
 
     //INIZIO TEST PER COMPATIBILITA' DATASET-DATAFRAME
 
-  
-    //FINE SEZIONE TEST CONVERSIONE 
-
-
+    //FINE SEZIONE TEST CONVERSIONE
 
     //df.cat_num_cols_to_fill()?;
 
     println! {"dopo la conversione la tabella è così:\n {}",df.tail(Some(5))};
-    /* 
+    /*
     let row = df.get_row(51)?;
     println!("{:?}", row);
     let row2 = df.get_row(233)?;
     println!("{:?}", row2);
     */
 
-    
     //dopo le conversioni, estraggo la colonna target dal dataframe originale
     let target_cols: Vec<i32> = df
         .column(&target_name)?
@@ -86,19 +82,34 @@ fn main() -> Result<(), AppError> {
         .collect();
 
     df.drop_in_place(&target_name)?;
-
     println!("stampiamo dopo il drop \n {}", df.tail(Some(5)));
-    let serie = Series::new_null("pippo".into(), 8);
-    serie.to_dummies(separator, drop_first, drop_nulls)?;
+    let serie = Column::new("pippo".into(), [0, 1, 2, 0, 1, 1]);
+    let dof = DataFrame::new(vec![serie])?;
+    //LINEA DI CODICE MOLTO IMPORTANTE. EFFETTUA L'OPERAZIONE CHE MI SERVE
+    let mut n = dof.group_by(["pippo"])?.groups()?;
+    println! {"ecco il numero di categorie: {} \n", n};
+
+    
+
+    let series = n.column("pippo")?;
+
+    let ca = series.i32()?; 
+    let mask: BooleanChunked  = ca.into_iter().map(|s| s.map(|v| v == 6)).collect();
+    let sus = n.column("pippo")?.filter(&mask)?;
+    
+    let sus2 = n.column("groups")?.filter(&mask)?;
+    
+    let new_df = DataFrame::new(vec![sus, sus2])?;
+    println!("{:?}", new_df);
+  
+
     //let sample_cols = df.scaler_encoder_df(3, &target_name)?;
 
     //println! {"dopo one-hot-encoding e il resto è così: \n {}", sample_cols.tail(Some(5)) };
 
     //convertiamo in array2
 
-    let sample_cols = df
-        .to_ndarray::<Float64Type>(IndexOrder::Fortran)
-        .unwrap();
+    let sample_cols = df.to_ndarray::<Float64Type>(IndexOrder::Fortran).unwrap();
 
     let sample_cols = ArrayView2::from(&sample_cols);
 
@@ -107,11 +118,11 @@ fn main() -> Result<(), AppError> {
 
     let target_col = ArrayView1::from(&target_col);
     //cross validation
-   // let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col, &target_name, &sample_col_names)?;
+    // let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col, &target_name, &sample_col_names)?;
 
- //   let original = ArrayView1::from(&original);
-//    let prediction = ArrayView1::from(&prediction);
-   // let mcc = get_mcc(original, prediction)?;
+    //   let original = ArrayView1::from(&original);
+    //    let prediction = ArrayView1::from(&prediction);
+    // let mcc = get_mcc(original, prediction)?;
 
     //SEZIONE PER IL CSV NON SERVE AL MOMENTO
     /*
@@ -125,12 +136,11 @@ fn main() -> Result<(), AppError> {
     // create confusion matrix
     // let cm = prediction.confusion_matrix(&ground_truth).unwrap();
 
-  //  println!("il valore di mcc è: {}", mcc);
+    //  println!("il valore di mcc è: {}", mcc);
 
     //TODO Interazione Main con linfa per l'addestramento
 
     println! {"il dataset che ho selezionato è: {}\n", get_dataset_info(Some(3))?.get_csv() };
-
 
     Ok(())
 }
