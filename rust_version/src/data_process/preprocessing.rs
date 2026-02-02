@@ -175,14 +175,14 @@ impl ChunckedArrayFromColumn for Column {
 //In questo modo abbiamo cat_num... accessibile in moduli esterni
 //mentre i metodi usati da quest'ultimo sono privati
 pub trait FillNullPolars: private::FillNullPolars {
-    fn cat_num_cols_to_fill(&mut self) -> Result<(), PolarsError>;
+    fn cat_num_cols_to_fill(&mut self) -> Result<(Vec<i32>, Vec<f64>), PolarsError>;
 }
 //dentro a questo modulo ci metterò tutti i metodi con visibilità limitata a questo mosulo
 pub(crate) mod private {
 
     use std::collections::HashSet;
 
-    use polars::frame::DataFrame;
+    use polars::{frame::DataFrame, prelude::Column};
 
     use crate::data_process::errors::AppError;
 
@@ -192,18 +192,18 @@ pub(crate) mod private {
             &mut self,
             chuncked: NumericCA,
             idx: usize,
-        ) -> Result<(), PolarsError>;
+        ) -> Result<f64, PolarsError>;
 
         fn fill_dataframe_median(
             &mut self,
             chuncked: NumericCA,
             idx: usize,
-        ) -> Result<(), PolarsError>;
+        ) -> Result<f64, PolarsError>;
     }
 
     pub trait ScalersEncoders {
         //effettua lo standard scaler, sottraendo ad ogni elemento la media e dividendo per la deviazione std con ddof = 0
-        fn std_scaler(&mut self, column_name: &str) -> Result<(), PolarsError>;
+        fn std_scaler(&mut self, column_name: &str) -> Result<f64, PolarsError>;
 
         //converte in automatico le colonne di to_dummies in f64
         fn to_dummies_f64(&mut self, column_name: &str) -> Result<DataFrame, PolarsError>;
@@ -214,6 +214,10 @@ pub(crate) mod private {
             hash_set: &HashSet<&str>,
             df: &DataFrame,
         ) -> Result<DataFrame, AppError>;
+
+        //permette di ottenere un vettore di colonne, dove ciascuna contiene le possibili categorie, informazione usata per to_dummies
+        fn get_categories(&mut self, index: usize) -> Result<Vec<Column>, AppError>;
+
     }
 }
 
@@ -222,22 +226,25 @@ pub(crate) mod private {
 //soluzione migliore alla duplicazione. Sono tutti metodi "privati"
 impl private::FillNullPolars for DataFrame {
     //implementazione per riempire i null con la moda
-    fn fill_dataframe_mode(&mut self, chuncked: NumericCA, idx: usize) -> Result<(), PolarsError> {
+    fn fill_dataframe_mode(&mut self, chuncked: NumericCA, idx: usize) -> Result<f64, PolarsError> {
         match chuncked {
             NumericCA::Int32(ca) => {
-                let filled = ca.fill_null_with_values(ca.calculate_mode().unwrap())?;
+                let mode = ca.calculate_mode().unwrap();
+                let filled = ca.fill_null_with_values(mode)?;
                 self.replace_column(idx, filled).unwrap();
-                Ok(())
+                Ok(mode as f64)
             }
             NumericCA::Int64(ca) => {
-                let filled = ca.fill_null_with_values(ca.calculate_mode().unwrap())?;
+                let mode = ca.calculate_mode().unwrap();
+                let filled = ca.fill_null_with_values(mode)?;
                 self.replace_column(idx, filled).unwrap();
-                Ok(())
+                Ok(mode as f64)
             }
             NumericCA::Float64(ca) => {
-                let filled = ca.fill_null_with_values(ca.calculate_mode().unwrap())?;
+                let mode = ca.calculate_mode().unwrap();
+                let filled = ca.fill_null_with_values(mode)?;
                 self.replace_column(idx, filled).unwrap();
-                Ok(())
+                Ok(mode)
             }
         }
     }
@@ -246,13 +253,14 @@ impl private::FillNullPolars for DataFrame {
         &mut self,
         chuncked: NumericCA,
         idx: usize,
-    ) -> Result<(), PolarsError> {
+    ) -> Result<f64, PolarsError> {
+        let mean_value: f64;
         match chuncked {
             //fill_null con la media per i non categorici int
             NumericCA::Int32(ca) => {
                 let series_f = ca.cast(&DataType::Float64)?;
                 let ca_f = series_f.f64()?;
-                let mean_value = ca_f.mean().unwrap();
+                mean_value = ca_f.mean().unwrap();
 
                 let filled = ca_f.fill_null_with_values(mean_value)?;
                 // usa `filled` o sostituisci la colonna
@@ -262,7 +270,7 @@ impl private::FillNullPolars for DataFrame {
             NumericCA::Int64(ca) => {
                 let series_f = ca.cast(&DataType::Float64)?;
                 let ca_f = series_f.f64()?;
-                let mean_value = ca_f.mean().unwrap();
+                mean_value = ca_f.mean().unwrap();
 
                 let filled = ca_f.fill_null_with_values(mean_value)?;
                 // usa `filled` o sostituisci la colonna
@@ -270,23 +278,25 @@ impl private::FillNullPolars for DataFrame {
             }
             //per i float
             NumericCA::Float64(ca) => {
-                let mean_value = ca.mean().unwrap();
+                mean_value = ca.mean().unwrap();
 
                 let filled = ca.fill_null_with_values(mean_value)?;
                 self.replace_column(idx, filled)?;
             }
         }
 
-        Ok(())
+        Ok(mean_value)
     }
 }
 //metodo "pubblico" per la il riempimento delle celle vuote
 impl FillNullPolars for DataFrame {
     //ritorna un vettore che contiene tutte le coppie indice e chucked array
     //da riempire
-    fn cat_num_cols_to_fill(&mut self) -> Result<(), PolarsError> {
+    fn cat_num_cols_to_fill(&mut self) -> Result<(Vec<i32>, Vec<f64>), PolarsError> {
         //per usare le implementazioni private dei trait
         use crate::data_process::preprocessing::private::FillNullPolars as _;
+        let mut mode: Vec<i32> = Vec::new();
+        let mut median: Vec<f64> = Vec::new();
         //ottengo le colonne categoriche
         let cat_cols = get_dataset_info(Some(3))
             .unwrap()
@@ -299,21 +309,22 @@ impl FillNullPolars for DataFrame {
             .iter()
             .map(|s| s.to_string())
             .collect();
-
         // enumerate è essenziale per ottenere l'indice della colonna
         for (idx, name) in names.into_iter().enumerate() {
             let s = df_i.column(&name)?;
             if s.null_count() != 0 && cat_cols.contains(name.as_str()) {
                 let chuncked = s.get_chuncked_array_from_column_type(s.dtype())?;
-                self.fill_dataframe_mode(chuncked, idx)?;
+                //riempio la colonna con la moda e la salvo nel vettore
+                mode.push(self.fill_dataframe_mode(chuncked, idx)? as i32);
             } else if s.null_count() != 0 && !cat_cols.contains(name.as_str()) {
                 let chuncked = s.get_chuncked_array_from_column_type(s.dtype())?;
-                self.fill_dataframe_median(chuncked, idx)?;
+                //riempio la colonna con la media e la salvo nel vettore
+                median.push(self.fill_dataframe_median(chuncked, idx)?);
             } else {
                 continue;
             }
         }
-        Ok(())
+        Ok((mode, median))
     }
 }
 
@@ -322,7 +333,7 @@ pub trait ScalerEncoder: private::ScalersEncoders {
         &mut self,
         index: usize,
         target_column: &str,
-    ) -> Result<DataFrame, AppError>;
+    ) -> Result<(DataFrame, Vec<f64> ), AppError>;
 }
 
 impl ScalerEncoder for DataFrame {
@@ -330,7 +341,9 @@ impl ScalerEncoder for DataFrame {
         &mut self,
         index: usize,
         target_column: &str,
-    ) -> Result<DataFrame, AppError> {
+    ) -> Result<(DataFrame, Vec<f64>), AppError> {
+        //genero un vettore vuoto che conterrà i valori per la normalizzazione
+        let mut std_scalers: Vec<f64> = Vec::new();
         //genero un dataframe vuoto iniziale
         let mut df = DataFrame::default();
         //ottengo il nome di tutte le colonne
@@ -347,11 +360,11 @@ impl ScalerEncoder for DataFrame {
             if cat_col_names.contains(col_name) {
                 df = df.hstack(&self.to_dummies_f64(col_name)?.get_columns())?;
             } else {
-                self.std_scaler(col_name)?;
+                std_scalers.push(self.std_scaler(col_name)?);
             }
         }
         let finalized = self.finalization(&cat_col_names, &df)?;
-        Ok(finalized)
+        Ok((finalized, std_scalers))
     }
 }
 
@@ -359,17 +372,17 @@ impl private::ScalersEncoders for DataFrame {
     //questo metodo si aspetta che i dati siano già convertiti in un tipo float
     //calcola lo standard scalar, ossia ogni numero di una colonna numerica
     //viene convertito di modo che abbia media 0 e std 1.
-    fn std_scaler(&mut self, column_name: &str) -> Result<(), PolarsError> {
+    fn std_scaler(&mut self, column_name: &str) -> Result<f64, PolarsError> {
         //calcolo della deviazione standard della colonna. Lo "0" è un parametro che indica la deviazione standard della popolazione
         let col = self[column_name].as_materialized_series();
         //ddof deve essere 0 per coerenza con scikit-learn della controparte python
         let col_std = &col.std(0).unwrap();
         //calcolo della media della colonna
         let col_mean = &col.mean().unwrap();
+        let std_scaler = col_mean / col_std;
+        self.apply(column_name, |s| s - std_scaler)?;
 
-        self.apply(column_name, |s| s - col_mean / col_std)?;
-
-        Ok(())
+        Ok(std_scaler)
     }
 
     fn to_dummies_f64(&mut self, column_name: &str) -> Result<DataFrame, PolarsError> {
@@ -403,5 +416,18 @@ impl private::ScalersEncoders for DataFrame {
         let finalized = self.hstack(df.get_columns())?;
         //restituisco un dataframe che rappresenta i samples
         Ok(finalized)
+    }
+    //ritorna un vettore colonne. Ogni colonna contiene tutte le categorie presenti nel dataframe di train. Serve per trasporre queste informazioni nella riga di valid
+    fn get_categories(&mut self, index: usize) -> Result<Vec<Column>, AppError> {
+    //raccoglie le categorie per ogni colonna categorica
+    let mut categories_per_col: Vec<Column> = Vec::new(); 
+    //raccogliamo i nomi delle colonne categoriche
+    let cat_column_names = get_dataset_info(Some(index))?.get_cat_cols();
+
+    for col in cat_column_names {
+        let df_categories = self.group_by([*col])?.groups()?;
+        categories_per_col.push(df_categories[*col].clone());
+    }
+    Ok(categories_per_col)
     }
 }

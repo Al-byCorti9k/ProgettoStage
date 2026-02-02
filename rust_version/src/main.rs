@@ -19,6 +19,7 @@ pub mod machine_learning;
 
 use crate::data_process::data::get_dataset_info;
 use crate::data_process::errors::AppError;
+use crate::data_process::preprocessing::private::ScalersEncoders;
 use crate::data_process::preprocessing::{ColumnsTypeConvertion, FillNullPolars, ScalerEncoder};
 use crate::machine_learning::validation::{get_mcc, leave_one_out_cross_validation};
 
@@ -83,26 +84,9 @@ fn main() -> Result<(), AppError> {
 
     df.drop_in_place(&target_name)?;
     println!("stampiamo dopo il drop \n {}", df.tail(Some(5)));
-    let serie = Column::new("pippo".into(), [0, 1, 2, 0, 1, 1]);
-    let dof = DataFrame::new(vec![serie])?;
-    //LINEA DI CODICE MOLTO IMPORTANTE. EFFETTUA L'OPERAZIONE CHE MI SERVE
-    let mut n = dof.group_by(["pippo"])?.groups()?;
-    println! {"ecco il numero di categorie: {} \n", n};
+
 
     
-
-    let series = n.column("pippo")?;
-
-    let ca = series.i32()?; 
-    let mask: BooleanChunked  = ca.into_iter().map(|s| s.map(|v| v == 6)).collect();
-    let sus = n.column("pippo")?.filter(&mask)?;
-    
-    let sus2 = n.column("groups")?.filter(&mask)?;
-    
-    let new_df = DataFrame::new(vec![sus, sus2])?;
-    println!("{:?}", new_df);
-  
-
     //let sample_cols = df.scaler_encoder_df(3, &target_name)?;
 
     //println! {"dopo one-hot-encoding e il resto è così: \n {}", sample_cols.tail(Some(5)) };
@@ -161,3 +145,4 @@ pub fn configure_the_environment() {
 fn print_type_of<T>(_: &T) {
     println!("{}", type_name::<T>());
 }
+
