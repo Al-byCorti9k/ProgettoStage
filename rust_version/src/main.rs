@@ -19,8 +19,8 @@ pub mod machine_learning;
 
 use crate::data_process::data::get_dataset_info;
 use crate::data_process::errors::AppError;
-use crate::data_process::preprocessing::private::ScalersEncoders;
-use crate::data_process::preprocessing::{ColumnsTypeConvertion, FillNullPolars, ScalerEncoder};
+use crate::data_process::preprocessing::private::{FillNullPolars, ScalersEncoders};
+use crate::data_process::preprocessing::{ColumnsTypeConvertion, ModaInt, ScalerEncoder};
 use crate::machine_learning::validation::{get_mcc, leave_one_out_cross_validation};
 
 fn main() -> Result<(), AppError> {
@@ -61,21 +61,12 @@ fn main() -> Result<(), AppError> {
     //converto i sample in f64, il target in i32
     df.sample_target_convertion(3, &target_name)?;
 
-    //INIZIO TEST PER COMPATIBILITA' DATASET-DATAFRAME
-
-    //FINE SEZIONE TEST CONVERSIONE
-
-    //df.cat_num_cols_to_fill()?;
-
-    println! {"dopo la conversione la tabella è così:\n {}",df.tail(Some(5))};
-    /*
-    let row = df.get_row(51)?;
-    println!("{:?}", row);
-    let row2 = df.get_row(233)?;
-    println!("{:?}", row2);
-    */
-
-    //dopo le conversioni, estraggo la colonna target dal dataframe originale
+    //riempio i valori nulli della colonna target
+    df.apply(&target_name, |c| {
+        let mode =  c.i32().unwrap().calculate_mode().unwrap();
+        c.i32().unwrap().fill_null_with_values(mode).unwrap().into_column()
+    })?;
+    //estraggo la colonna target e poi la elimino dal dataframe
     let target_cols: Vec<i32> = df
         .column(&target_name)?
         .i32()?
@@ -85,14 +76,7 @@ fn main() -> Result<(), AppError> {
     df.drop_in_place(&target_name)?;
     println!("stampiamo dopo il drop \n {}", df.tail(Some(5)));
 
-
-    
-    //let sample_cols = df.scaler_encoder_df(3, &target_name)?;
-
-    //println! {"dopo one-hot-encoding e il resto è così: \n {}", sample_cols.tail(Some(5)) };
-
     //convertiamo in array2
-
     let sample_cols = df.to_ndarray::<Float64Type>(IndexOrder::Fortran).unwrap();
 
     let sample_cols = ArrayView2::from(&sample_cols);
@@ -108,14 +92,6 @@ fn main() -> Result<(), AppError> {
     //    let prediction = ArrayView1::from(&prediction);
     // let mcc = get_mcc(original, prediction)?;
 
-    //SEZIONE PER IL CSV NON SERVE AL MOMENTO
-    /*
-    let s1 = Column::new("rust_pred".into(), prediction);
-    let mut df4  = DataFrame::new(vec![s1])?;
-    let mut file = File::create("example.csv").expect("could not create file");
-    CsvWriter::new(&mut file)
-    .finish(&mut df4)?;
-    */
 
     // create confusion matrix
     // let cm = prediction.confusion_matrix(&ground_truth).unwrap();

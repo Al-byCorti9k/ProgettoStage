@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn test_conversione_to_hashset() -> Result<(), AppError> {
-        use polars::prelude::*;
+        
         let pippo = get_dataset_info(Some(0))?.get_cat_cols();
         let franco = pippo.vec_to_hashset();
 

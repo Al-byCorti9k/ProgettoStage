@@ -22,13 +22,9 @@ pub fn leave_one_out_cross_validation<'a>(
     //effettuo il folding, cioè addestro con logistic regression con LOOCV
     
     for (train, valid) in dataset.fold(n) {
-        println!("stampiamo train \n {:?}", train);
-        println!("stampiamo valid \n {:?}", valid);
         //Train contiene k-1 fold, valid i restanti
         //ricorda che i fold sono gruppi di righe
-        let train = fold_dataset_preprocessing(train.view(), target_name, sample_col_names)?;
-        
-       let valid = fold_dataset_preprocessing(valid.view(), target_name, sample_col_names)?;
+        let (train, valid) = fold_dataset_preprocessing(train.view(),valid.view(), target_name, sample_col_names)?;
         //addestriamo il modello
         let model = LogisticRegression::default()
             .max_iterations(50)

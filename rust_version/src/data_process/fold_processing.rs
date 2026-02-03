@@ -6,8 +6,6 @@ use linfa::{Dataset, DatasetView};
 use ndarray::{Array2, ArrayView2, Axis, Ix1};
 use polars::prelude::*;
 
-use std::collections::HashMap;
-
 use crate::data_process::{
     data::{VecToHash, get_dataset_info},
     errors::AppError,
@@ -106,7 +104,7 @@ impl FitTrasformState {
             if cat_cols_name.contains(col.as_str()) {
                 df_new = df_new.hstack(df.to_dummies_valid(col.as_str(), self.map_category.remove(0))?.get_columns())?;
             } else {
-                df.std_scaler(col)?;
+                df.std_scaler_valid(col.as_str(), self.std_scaler.remove(0))?;
             }
         }
         let finalized = df.finalization(&cat_cols_name, &df_new)?;
@@ -147,31 +145,47 @@ impl FitTrasformState {
 //la funzione verrà chiamata per ogni fold e permetterà di usare i metodi per il
 //preprocessing polars sui dataset linfa, attraverso varie conversioni
 pub fn fold_dataset_preprocessing<'a>(
-    dataset: DatasetView<'a, f64, i32, Ix1>,
+    train_dset: DatasetView<'a, f64, i32, Ix1>,
+    valid_dset: DatasetView<'a, f64, i32, Ix1>,
     target_name: &str,
     sample_col_names: &Vec<String>,
-) -> Result<Dataset<f64, i32, Ix1>, AppError> {
-    //effettua l'accesso diretto ai sample
-    let samples = dataset.records();
-    let targets = dataset.targets().to_owned();
-    //dai sample passo al dataframe polars
-    let mut df = ndarray_to_df(samples, sample_col_names)?;
-    println!("stampiamo il dataframe {}", df);
-    //chiamo la funzione per il riempimento dei valori nulli
-    println!("ciaooo prima del riempimento");
-    df.cat_num_cols_to_fill()?;
-    //chiamiamo la funzione per effettuare lo standard scaler e il one-hot-encoding
-    println!("ciaooo prima dell'encoding!");
-    let (sample_processed, std) = df.scaler_encoder_df(3, target_name)?;
-    println!("ciaoo dopo l'encoding!");
-    //ora riconvertiamo il dataframe in dataset
-    let sample_processed = sample_processed
-        .to_ndarray::<Float64Type>(IndexOrder::Fortran)
-        .unwrap();
-    let samples_p = Array2::from(sample_processed);
+) -> Result<(Dataset<f64, i32, Ix1>, Dataset<f64, i32, Ix1> ), AppError> {
+   
+//inizializzo la struct che rappresenta lo stato del preprocessing
+let mut processing_state = FitTrasformState::new();
+//estraggo dai dataset i sample e il target di train e valid
+let sample_train = train_dset.records();
+let target_train = train_dset.targets().to_owned();
+let sample_valid = valid_dset.records();
+let target_valid = valid_dset.targets().to_owned();
+//convertiamo in un dataframe polars solo il sample del target
+let mut df = ndarray_to_df(sample_train, sample_col_names)?;
+//ora riempiamo i valori nulli. In ogni caso, la media e moda usata verranno salvati nello stato
+processing_state.compute_median_mode_train(&mut df)?;
+//ora effettuiamo la scalatura e il one hot encoding, salvando nello stato le relative informazioni
+let df_new_train = processing_state.compute_std_encoding_train(&mut df, 3, target_name)?;
+//ottenuta il sample train correttamente processato, usiamo la struct per processare con quei dati i sample valid
 
-    let dataset = Dataset::new(samples_p, targets);
-    Ok(dataset)
+//convertiamo in un dataframe polars solo il sample del valid
+let mut df_valid = ndarray_to_df(sample_valid, sample_col_names)?;
+//riempio i possibili valori nulli con i dati della struct con moda o media
+processing_state.trasform_mm_valid(&mut df_valid, 3, target_name)?;
+//effettuo su sample_valid il one-hot-encoding e la scalatura con i dati della struct
+let df_new_valid = processing_state.trasform_encoding_valid(&mut df_valid, 3, target_name )?;
+
+//ottenuti i due dataframe processati, vanno ricostruiti i dataset
+//train
+let df_new_train = df_new_train.to_ndarray::<Float64Type>(IndexOrder::Fortran).unwrap();
+let sample_train = Array2::from(df_new_train);
+let dataset_train = Dataset::new(sample_train, target_train);
+//valid
+let df_new_valid = df_new_valid.to_ndarray::<Float64Type>(IndexOrder::Fortran).unwrap();
+let sample_valid = Array2::from(df_new_valid);
+let dataset_valid = Dataset::new(sample_valid, target_valid );
+
+Ok((dataset_train, dataset_valid))
+
+
 }
 
 //questa funzione restituisce un dataframe polars per effettuare il preprocessing
