@@ -217,7 +217,14 @@ pub(crate) mod private {
 
         //permette di ottenere un vettore di colonne, dove ciascuna contiene le possibili categorie, informazione usata per to_dummies
         fn get_categories(&mut self, index: usize) -> Result<Vec<Column>, AppError>;
-
+        //to_dummies per la riga valid. usa le informazioni di stato per costruire la categorie
+        fn to_dummies_valid(
+            &mut self,
+            column_name: &str,
+            category: Column,
+        ) -> Result<DataFrame, AppError>;
+        //normalizza la riga valid con la scalatura scalare
+        fn std_scaler_valid(&mut self, column_name: &str, std_scaler: f64) -> Result<(), AppError>;
     }
 }
 
@@ -333,7 +340,7 @@ pub trait ScalerEncoder: private::ScalersEncoders {
         &mut self,
         index: usize,
         target_column: &str,
-    ) -> Result<(DataFrame, Vec<f64> ), AppError>;
+    ) -> Result<(DataFrame, Vec<f64>), AppError>;
 }
 
 impl ScalerEncoder for DataFrame {
@@ -419,15 +426,69 @@ impl private::ScalersEncoders for DataFrame {
     }
     //ritorna un vettore colonne. Ogni colonna contiene tutte le categorie presenti nel dataframe di train. Serve per trasporre queste informazioni nella riga di valid
     fn get_categories(&mut self, index: usize) -> Result<Vec<Column>, AppError> {
-    //raccoglie le categorie per ogni colonna categorica
-    let mut categories_per_col: Vec<Column> = Vec::new(); 
-    //raccogliamo i nomi delle colonne categoriche
-    let cat_column_names = get_dataset_info(Some(index))?.get_cat_cols();
+        //raccoglie le categorie per ogni colonna categorica
+        let mut categories_per_col: Vec<Column> = Vec::new();
+        //raccogliamo i nomi delle colonne categoriche
+        let cat_column_names = get_dataset_info(Some(index))?.get_cat_cols();
 
-    for col in cat_column_names {
-        let df_categories = self.group_by([*col])?.groups()?;
-        categories_per_col.push(df_categories[*col].clone());
+        for col in cat_column_names {
+            let df_categories = self.group_by([*col])?.groups()?;
+            categories_per_col.push(df_categories[*col].clone());
+        }
+        Ok(categories_per_col)
     }
-    Ok(categories_per_col)
+
+    fn std_scaler_valid(&mut self, column_name: &str, std_scaler: f64) -> Result<(), AppError> {
+        self.apply(column_name, |s| s - std_scaler)?;
+        
+        Ok(())
+    }
+
+    fn to_dummies_valid(
+        &mut self,
+        column_name: &str,
+        category: Column,
+    ) -> Result<DataFrame, AppError> {
+        //ottengo il valore della colonna del valid
+        let value_cat = self.column(column_name)?.f64()?.get(0).unwrap() as i32;
+        //ottengo il numero di categorie generate dal train set
+        let n_cat = category.len();
+        //conterrà le nuove colonne
+        let mut cols: Vec<Column> = Vec::with_capacity(n_cat);
+        //verifico che il dato in column name appartenga ad una delle categorie
+        //del train set
+        /*
+        let ca = category.i32()?;
+        let mask: BooleanChunked = ca.into_iter().map(|s| s.map(|v| v == value_cat)).collect();
+        //creata la maschera, la applico per verificare l'appartenenza
+        let check_df = category.filter(&mask)?;
+        //conterrà le nuove colonne
+        let mut cols: Vec<Column> = Vec::with_capacity(n_cat);
+        if check_df.is_empty() {
+            //se è vuota, vuol dire che è una categoria nuova. creo un dataframe con tre colonne con valore 0.
+            for i in 0..n_cat {
+                let name = format!("{}_{}", column_name, i);
+                let val: f64 = 0 as f64;
+
+                cols.push(Column::new(name.into(), &[val]));
+            }
+            */
+        //nel caso in cui non fosse vuota, allora devo generare un dataframe con n colonne, dove si ha un 1 nella colonna della categoria apposita.
+        for (i, v) in category
+            .as_series()
+            .unwrap()
+            .i32()?
+            .into_no_null_iter()
+            .enumerate()
+        {
+            let name = format!("{}_{}", column_name, i);
+            let mut val = 0.0;
+            if v == value_cat {
+                val = value_cat as f64;
+            }
+            cols.push(Column::new(name.into(), &[val]));
+        }
+
+        Ok(DataFrame::new(cols)?)
     }
 }

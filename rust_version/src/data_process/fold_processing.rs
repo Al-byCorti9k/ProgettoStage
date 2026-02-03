@@ -55,12 +55,13 @@ impl FitTrasformState {
         Ok(df_encoded)
     }
     //una funzione che applica tutti i dati della struct al Valid per effettuare il preprocessing con gli stessi parametri che sono stati applicati per il train set
-    fn trasform_mm_valid(&mut self, dataframe: &mut DataFrame, index: usize) -> Result<(), AppError> {
+    fn trasform_mm_valid(&mut self, dataframe: &mut DataFrame, index: usize, target_name: &str) -> Result<(), AppError> {
         let col_names = dataframe.get_column_names();
         let mut df = dataframe.clone();
-        let cat_cols_name = get_dataset_info(Some(index))?
+        let mut cat_cols_name = get_dataset_info(Some(index))?
             .get_cat_cols()
             .vec_to_hashset();
+        cat_cols_name.remove(target_name);
 
         for col in col_names {
             let s = dataframe.column(col)?;
@@ -92,10 +93,25 @@ impl FitTrasformState {
         Ok(())
     }
 
-    fn trasform_encoding_valid(&mut self, dataframe: &mut DataFrame, index: usize) -> Result<(), AppError>{
+    fn trasform_encoding_valid(&mut self, dataframe: &mut DataFrame, index: usize, target_column: &str) -> Result<DataFrame, AppError>{
         //TODO STD_SCALER E ONE HOT ENCODING
+        let col_names = dataframe.get_column_names();
+        let mut df = dataframe.clone();
+        let mut df_new = DataFrame::default();
+        let mut cat_cols_name = get_dataset_info(Some(index))?
+            .get_cat_cols()
+            .vec_to_hashset();
+        cat_cols_name.remove(target_column);
+         for col in col_names {
+            if cat_cols_name.contains(col.as_str()) {
+                df_new = df_new.hstack(df.to_dummies_valid(col.as_str(), self.map_category.remove(0))?.get_columns())?;
+            } else {
+                df.std_scaler(col)?;
+            }
+        }
+        let finalized = df.finalization(&cat_cols_name, &df_new)?;
         
-        Ok(())
+        Ok(finalized)
     }
     //metodo per creare un'istanza vuota di FitTrasformState
     fn new() -> Self {

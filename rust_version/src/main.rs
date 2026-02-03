@@ -102,7 +102,7 @@ fn main() -> Result<(), AppError> {
 
     let target_col = ArrayView1::from(&target_col);
     //cross validation
-    // let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col, &target_name, &sample_col_names)?;
+     let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col, &target_name, &sample_col_names)?;
 
     //   let original = ArrayView1::from(&original);
     //    let prediction = ArrayView1::from(&prediction);
