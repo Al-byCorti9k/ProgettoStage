@@ -5,22 +5,18 @@
 use std::env;
 use std::path::Path;
 
-use linfa::prelude::*;
+
 use polars::prelude::*;
 //use ndarray::Array2;
-use ndarray::{Array1, ArrayView1, ArrayView2, Axis, Data};
-use polars_core::prelude::*;
-use polars_io::prelude::*;
-use std::any::type_name;
-use std::fs::File;
+use ndarray::{Array1, ArrayView1, ArrayView2};
 
 pub mod data_process;
 pub mod machine_learning;
 
 use crate::data_process::data::get_dataset_info;
 use crate::data_process::errors::AppError;
-use crate::data_process::preprocessing::private::{FillNullPolars, ScalersEncoders};
-use crate::data_process::preprocessing::{ColumnsTypeConvertion, ModaInt, ScalerEncoder};
+
+use crate::data_process::preprocessing::{ColumnsTypeConvertion, ModaInt};
 use crate::machine_learning::validation::{get_mcc, leave_one_out_cross_validation};
 
 fn main() -> Result<(), AppError> {
@@ -60,7 +56,7 @@ fn main() -> Result<(), AppError> {
 
     //converto i sample in f64, il target in i32
     df.sample_target_convertion(3, &target_name)?;
-
+    println!("stampiamo dopo la conversione!\n {}", df.tail(Some(5)));
     //riempio i valori nulli della colonna target
     df.apply(&target_name, |c| {
         let mode =  c.i32().unwrap().calculate_mode().unwrap();
@@ -85,20 +81,21 @@ fn main() -> Result<(), AppError> {
     let target_col = Array1::from(target_cols);
 
     let target_col = ArrayView1::from(&target_col);
-    //cross validation
+
+
+    //cross validations
      let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col, &target_name, &sample_col_names)?;
 
-    //   let original = ArrayView1::from(&original);
-    //    let prediction = ArrayView1::from(&prediction);
-    // let mcc = get_mcc(original, prediction)?;
+    let original = ArrayView1::from(&original);
+    let prediction = ArrayView1::from(&prediction);
+    let mcc = get_mcc(original, prediction)?;
 
 
-    // create confusion matrix
-    // let cm = prediction.confusion_matrix(&ground_truth).unwrap();
+    // crea la matrice di confusione
+    //let cm = prediction.confusion_matrix(&ground_truth).unwrap();
 
-    //  println!("il valore di mcc è: {}", mcc);
+    println!("il valore di mcc è: {}", mcc);
 
-    //TODO Interazione Main con linfa per l'addestramento
 
     println! {"il dataset che ho selezionato è: {}\n", get_dataset_info(Some(3))?.get_csv() };
 
@@ -118,7 +115,4 @@ pub fn configure_the_environment() {
     }
 }
 
-fn print_type_of<T>(_: &T) {
-    println!("{}", type_name::<T>());
-}
 

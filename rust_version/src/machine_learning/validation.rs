@@ -25,6 +25,8 @@ pub fn leave_one_out_cross_validation<'a>(
         //Train contiene k-1 fold, valid i restanti
         //ricorda che i fold sono gruppi di righe
         let (train, valid) = fold_dataset_preprocessing(train.view(),valid.view(), target_name, sample_col_names)?;
+        println!("{:?}", train.feature_names());
+        println!("{:?}", valid.feature_names());
         //addestriamo il modello
         let model = LogisticRegression::default()
             .max_iterations(50)

@@ -175,7 +175,7 @@ impl ChunckedArrayFromColumn for Column {
 //In questo modo abbiamo cat_num... accessibile in moduli esterni
 //mentre i metodi usati da quest'ultimo sono privati
 pub trait FillNullPolars: private::FillNullPolars {
-    fn cat_num_cols_to_fill(&mut self) -> Result<(Vec<i32>, Vec<f64>), PolarsError>;
+    fn cat_num_cols_to_fill(&mut self) -> Result<(HashMap<String, i32>, HashMap<String, f64>), PolarsError>;
 }
 //dentro a questo modulo ci metterò tutti i metodi con visibilità limitata a questo mosulo
 pub(crate) mod private {
@@ -216,7 +216,7 @@ pub(crate) mod private {
         ) -> Result<DataFrame, AppError>;
 
         //permette di ottenere un vettore di colonne, dove ciascuna contiene le possibili categorie, informazione usata per to_dummies
-        fn get_categories(&mut self, index: usize) -> Result<Vec<Column>, AppError>;
+        fn get_categories(&mut self, index: usize, column_name: &str) -> Result<Vec<Column>, AppError>;
         //to_dummies per la riga valid. usa le informazioni di stato per costruire la categorie
         fn to_dummies_valid(
             &mut self,
@@ -299,11 +299,11 @@ impl private::FillNullPolars for DataFrame {
 impl FillNullPolars for DataFrame {
     //ritorna un vettore che contiene tutte le coppie indice e chucked array
     //da riempire
-    fn cat_num_cols_to_fill(&mut self) -> Result<(Vec<i32>, Vec<f64>), PolarsError> {
+    fn cat_num_cols_to_fill(&mut self) -> Result<(HashMap<String, i32>, HashMap<String, f64>), PolarsError> {
         //per usare le implementazioni private dei trait
         use crate::data_process::preprocessing::private::FillNullPolars as _;
-        let mut mode: Vec<i32> = Vec::new();
-        let mut median: Vec<f64> = Vec::new();
+        let mut mode:HashMap<String, i32>  = HashMap::new();
+        let mut median:HashMap<String, f64>  = HashMap::new();
         //ottengo le colonne categoriche
         let cat_cols = get_dataset_info(Some(3))
             .unwrap()
@@ -322,11 +322,11 @@ impl FillNullPolars for DataFrame {
             if s.null_count() != 0 && cat_cols.contains(name.as_str()) {
                 let chuncked = s.get_chuncked_array_from_column_type(s.dtype())?;
                 //riempio la colonna con la moda e la salvo nel vettore
-                mode.push(self.fill_dataframe_mode(chuncked, idx)? as i32);
+                mode.insert(name, self.fill_dataframe_mode(chuncked, idx)? as i32);
             } else if s.null_count() != 0 && !cat_cols.contains(name.as_str()) {
                 let chuncked = s.get_chuncked_array_from_column_type(s.dtype())?;
                 //riempio la colonna con la media e la salvo nel vettore
-                median.push(self.fill_dataframe_median(chuncked, idx)?);
+                median.insert(name, self.fill_dataframe_median(chuncked, idx)?);
             } else {
                 continue;
             }
@@ -340,7 +340,7 @@ pub trait ScalerEncoder: private::ScalersEncoders {
         &mut self,
         index: usize,
         target_column: &str,
-    ) -> Result<(DataFrame, Vec<f64>), AppError>;
+    ) -> Result<(DataFrame, HashMap<String, f64>), AppError>;
 }
 
 impl ScalerEncoder for DataFrame {
@@ -348,9 +348,9 @@ impl ScalerEncoder for DataFrame {
         &mut self,
         index: usize,
         target_column: &str,
-    ) -> Result<(DataFrame, Vec<f64>), AppError> {
+    ) -> Result<(DataFrame, HashMap<String, f64>), AppError> {
         //genero un vettore vuoto che conterrà i valori per la normalizzazione
-        let mut std_scalers: Vec<f64> = Vec::new();
+        let mut std_scalers:HashMap<String, f64>  = HashMap::new();
         //genero un dataframe vuoto iniziale
         let mut df = DataFrame::default();
         //ottengo il nome di tutte le colonne
@@ -367,7 +367,7 @@ impl ScalerEncoder for DataFrame {
             if cat_col_names.contains(col_name) {
                 df = df.hstack(&self.to_dummies_f64(col_name)?.get_columns())?;
             } else {
-                std_scalers.push(self.std_scaler(col_name)?);
+                std_scalers.insert(col_name.to_string(), self.std_scaler(col_name)?);
             }
         }
         let finalized = self.finalization(&cat_col_names, &df)?;
@@ -425,15 +425,16 @@ impl private::ScalersEncoders for DataFrame {
         Ok(finalized)
     }
     //ritorna un vettore colonne. Ogni colonna contiene tutte le categorie presenti nel dataframe di train. Serve per trasporre queste informazioni nella riga di valid
-    fn get_categories(&mut self, index: usize) -> Result<Vec<Column>, AppError> {
+    fn get_categories(&mut self, index: usize, target_column: &str) -> Result<Vec<Column>, AppError> {
         //raccoglie le categorie per ogni colonna categorica
         let mut categories_per_col: Vec<Column> = Vec::new();
         //raccogliamo i nomi delle colonne categoriche
-        let cat_column_names = get_dataset_info(Some(index))?.get_cat_cols();
+        let mut cat_column_names = get_dataset_info(Some(index))?.get_cat_cols().vec_to_hashset();
+        cat_column_names.remove(target_column);
 
         for col in cat_column_names {
-            let df_categories = self.group_by([*col])?.groups()?;
-            categories_per_col.push(df_categories[*col].clone());
+            let df_categories = self.group_by([col])?.groups()?;
+            categories_per_col.push(df_categories[col].clone());
         }
         Ok(categories_per_col)
     }
@@ -450,34 +451,16 @@ impl private::ScalersEncoders for DataFrame {
         category: Column,
     ) -> Result<DataFrame, AppError> {
         //ottengo il valore della colonna del valid
-        let value_cat = self.column(column_name)?.f64()?.get(0).unwrap() as i32;
+        let value_cat = self.column(column_name)?.f64()?.get(0).unwrap() ;
         //ottengo il numero di categorie generate dal train set
         let n_cat = category.len();
         //conterrà le nuove colonne
         let mut cols: Vec<Column> = Vec::with_capacity(n_cat);
-        //verifico che il dato in column name appartenga ad una delle categorie
-        //del train set
-        /*
-        let ca = category.i32()?;
-        let mask: BooleanChunked = ca.into_iter().map(|s| s.map(|v| v == value_cat)).collect();
-        //creata la maschera, la applico per verificare l'appartenenza
-        let check_df = category.filter(&mask)?;
-        //conterrà le nuove colonne
-        let mut cols: Vec<Column> = Vec::with_capacity(n_cat);
-        if check_df.is_empty() {
-            //se è vuota, vuol dire che è una categoria nuova. creo un dataframe con tre colonne con valore 0.
-            for i in 0..n_cat {
-                let name = format!("{}_{}", column_name, i);
-                let val: f64 = 0 as f64;
-
-                cols.push(Column::new(name.into(), &[val]));
-            }
-            */
         //nel caso in cui non fosse vuota, allora devo generare un dataframe con n colonne, dove si ha un 1 nella colonna della categoria apposita.
         for (i, v) in category
             .as_series()
             .unwrap()
-            .i32()?
+            .f64()?
             .into_no_null_iter()
             .enumerate()
         {
