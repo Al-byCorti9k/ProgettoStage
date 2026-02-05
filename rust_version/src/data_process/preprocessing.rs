@@ -363,11 +363,11 @@ impl private::ScalersEncoders for DataFrame {
         //calcolo della deviazione standard della colonna. Lo "0" è un parametro che indica la deviazione standard della popolazione
         let col = self[column_name].as_materialized_series();
         //ddof deve essere 0 per coerenza con scikit-learn della controparte python
-        let col_std = &col.std(0).unwrap();
+        let col_std = col.std(0).unwrap();
         //calcolo della media della colonna
-        let col_mean = &col.mean().unwrap();
+        let col_mean = col.mean().unwrap();
 
-        self.apply(column_name, |s| s - col_mean / col_std)?;
+        self.apply(column_name, |s| (s - col_mean) / col_std)?;
 
         Ok(())
     }

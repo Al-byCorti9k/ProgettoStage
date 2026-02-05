@@ -10,6 +10,7 @@ use linfa::prelude::*;
 //use ndarray::Array2;
 use ndarray::{Array1, ArrayView1, ArrayView2,array};
 use std::any::type_name;
+use std::fs::File;
 
 pub mod data_process;
 pub mod machine_learning;
@@ -79,10 +80,14 @@ fn main() -> Result<(), AppError> {
 
     println!("stampiamo dopo il drop \n {}", df.tail(Some(5)));
 
-    let sample_cols = df.scaler_encoder_df(3, &target_name)?;
+    let mut sample_cols = df.scaler_encoder_df(3, &target_name)?;
 
     println! {"dopo one-hot-encoding e il resto è così: \n {}", sample_cols.tail(Some(5)) };
-
+    println!("inizio conversione in csv");
+    let mut file = File::create("example.csv").expect("could not create file");
+    CsvWriter::new(&mut file)
+    .finish(&mut sample_cols)?;
+    println!("fine conversione in csv");
     //convertiamo in array2
 
     let sample_cols = sample_cols
@@ -95,7 +100,7 @@ fn main() -> Result<(), AppError> {
     let target_col = Array1::from(target_cols);
 
     let target_col = ArrayView1::from(&target_col);
-
+    println!("inizio LOOCV");
     let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col)?;
 
     let original = ArrayView1::from(&original);

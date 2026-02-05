@@ -122,12 +122,6 @@ categorical_trasformer = Pipeline(steps =
                              ]     
                                   
                                   )
-target_trasformer = Pipeline(steps =
-                             [
-                                 ('moda', SimpleImputer
-                                  (strategy = "most_frequent"))
-                             ]
-                            )
 # specifico solo per la colonna target. Riempie solo le colonne con celle vuote
 preprocessor = ColumnTransformer(
     transformers=[

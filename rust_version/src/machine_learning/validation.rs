@@ -31,8 +31,6 @@ pub fn leave_one_out_cross_validation<'a>(
         y_true.push(valid.targets()[0]);
         y_pred.push(pred[0]);
 
-        // c += 1;
-        // println!("fold {}", c);
     }
     Ok((y_true, y_pred))
 }
