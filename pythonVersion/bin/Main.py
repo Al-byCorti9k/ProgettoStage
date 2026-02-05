@@ -47,9 +47,11 @@ for key, value in dtype_csv_dict.items():
     if not args.elevated:
         
         y_predict, times = dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
+        
+        
         MCC = matthews_corrcoef(y_response, y_predict)
           
-
+    
     os = dataprocess.checkOperatingSystem()
     
     consumptions = dataprocess.energyConsumption(os, args.e, args.ec, name_csv, x_predictor, y_response)
@@ -58,8 +60,10 @@ for key, value in dtype_csv_dict.items():
     
     
 
-
 # Stampa e salvataggio dei risultati
+df = pd.DataFrame({'Predictions': y_predict})
+df.to_csv('predictions.csv', index=False)
+
 if not args.elevated and not args.v:
   
     dataprocess.createCSV(args.r)   
