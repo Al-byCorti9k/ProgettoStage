@@ -96,11 +96,12 @@ fn main() -> Result<(), AppError> {
 
     let target_col = ArrayView1::from(&target_col);
 
-    //let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col)?;
+    let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col)?;
 
-    //let original = ArrayView1::from(&original);
-    //let prediction = ArrayView1::from(&prediction);
-    //let mcc = get_mcc(original, prediction)?;
+    let original = ArrayView1::from(&original);
+    let prediction = ArrayView1::from(&prediction);
+    let mcc = get_mcc(original, prediction)?;
+    println!("il valore di mcc del dataset è: {}", mcc);
 
     // create dummy classes 0 and 1
     let prediction = array![0, 1, 1, 1, 0, 0, 1];

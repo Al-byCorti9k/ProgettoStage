@@ -122,6 +122,13 @@ categorical_trasformer = Pipeline(steps =
                              ]     
                                   
                                   )
+target_trasformer = Pipeline(steps =
+                             [
+                                 ('moda', SimpleImputer
+                                  (strategy = "most_frequent"))
+                             ]
+                            )
+# specifico solo per la colonna target. Riempie solo le colonne con celle vuote
 preprocessor = ColumnTransformer(
     transformers=[
         ('num', numeric_trasformer, selector(dtype_exclude="category")),
@@ -131,7 +138,7 @@ preprocessor = ColumnTransformer(
 
 
 # Uso la classificazione con regressione logistica e LOOCV 
-model = linear_model.LogisticRegression(max_iter = 1000)
+model = linear_model.LogisticRegression(max_iter = 50)
 cvp = model_selection.LeaveOneOut()
 
 # preprocessare i dati è fondamentale per rendere comparabili i valori 
@@ -139,7 +146,7 @@ cvp = model_selection.LeaveOneOut()
 # per permettere un confronto adeguato
 
 # creo una pipeline che effettua il preprocessing e poi applica il modello
-clf = make_pipeline(preprocessor, model)
+#clf = make_pipeline(preprocessor, model)
 
 # viene effettuata la LOOCV predittiva, in modo da ottenere 
 # le previsioni di ciascun fold, per poi valutare la prestazione
@@ -147,7 +154,7 @@ clf = make_pipeline(preprocessor, model)
 def Logistic_Regression_Validation(x_predictor, y_response):
    
     start = time.time()
-    y_predict = model_selection.cross_val_predict(clf, x_predictor, y_response, cv = cvp )
+    y_predict = model_selection.cross_val_predict(model, x_predictor, y_response, cv = cvp )
     end = time.time()
     
     seconds = end - start
