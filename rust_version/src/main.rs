@@ -9,7 +9,6 @@ use polars::prelude::*;
 use linfa::prelude::*;
 //use ndarray::Array2;
 use ndarray::{Array1, ArrayView1, ArrayView2,array};
-use std::any::type_name;
 use std::fs::File;
 
 pub mod data_process;
@@ -137,6 +136,4 @@ pub fn configure_the_environment() {
     }
 }
 
-fn print_type_of<T>(_: &T) {
-    println!("{}", type_name::<T>());
-}
+

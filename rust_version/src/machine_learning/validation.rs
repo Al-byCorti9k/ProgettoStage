@@ -3,6 +3,7 @@ use linfa_logistic::LogisticRegression;
 use ndarray::{ArrayView1, ArrayView2};
 use rayon::prelude::*;
 use crate::data_process::errors::AppError;
+use indicatif::{ParallelProgressIterator, ProgressStyle};
 
 //metodo pubblico che riceve in input i samples
 // e il target nel formato ndarray e restituisce
@@ -14,7 +15,9 @@ pub fn leave_one_out_cross_validation<'a>(
     let dataset = DatasetView::new(samples, target);
     //otteniamo il numero di campioni (righe)
     let n = dataset.nsamples();
-
+    let style: ProgressStyle = ProgressStyle::with_template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
+    .unwrap()
+    .progress_chars("##-");
     // Trasformiamo le fold in un vettore per poter usare par_iter
     let folds: Vec<_> = dataset.fold(n).into_iter().collect();
 
@@ -22,6 +25,7 @@ pub fn leave_one_out_cross_validation<'a>(
     let results: Result<Vec<(i32, i32)>, AppError> = folds
     //genera iteratori che lavorano in parallelo
         .into_par_iter()
+        .progress_with_style(style)
         .map(|(train, valid)| {
             let model = LogisticRegression::default()
                 .max_iterations(50)
