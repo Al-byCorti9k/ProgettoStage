@@ -5,14 +5,16 @@
 use std::env;
 use std::path::Path;
 
+use crate::utils::data_view::Args;
+use clap::Parser;
+
+use ndarray::{Array1, ArrayView1, ArrayView2};
 use polars::prelude::*;
-use linfa::prelude::*;
-//use ndarray::Array2;
-use ndarray::{Array1, ArrayView1, ArrayView2,array};
 use std::fs::File;
 
 pub mod data_process;
 pub mod machine_learning;
+pub mod utils;
 
 use crate::data_process::data::get_dataset_info;
 use crate::data_process::errors::AppError;
@@ -21,14 +23,19 @@ use crate::machine_learning::validation::{get_mcc, leave_one_out_cross_validatio
 
 fn main() -> Result<(), AppError> {
     configure_the_environment();
+
+    let args = Args::parse();
+    let index = args.dataset[0];
+
     //iniziamo con il prendere il path
     let starting_path = Path::new(".");
     //vogliamo prelevare un dataset dal percorso "data"
-    let mut csv_path = starting_path.join("..").join("data");
+    let mut csv_path = starting_path.join("..").join("..").join("..").join("data");
     //nota che join si occupa di mettere il separatore corretto per l'OS
     //scegliamo il dataset
-    let selected_cvs = "journal.pone.0175818_S1Dataset_Spain_cardiac_arrest_EDITED.csv";
-    csv_path.push(selected_cvs);
+    let selected_csv = get_dataset_info(Some(index))?.get_csv();
+
+    csv_path.push(selected_csv);
 
     //ottenuto il percorso, con polars creiamo il relativo dataframe
     let mut df = CsvReadOptions::default()
@@ -53,39 +60,25 @@ fn main() -> Result<(), AppError> {
     //ottengo il nome della colonna di interesse. In questo caso l'ultima
     let target_name = sample_col_names.swap_remove(target_index);
 
-    df.sample_target_convertion(3, &target_name)?;
+    df.sample_target_convertion(index, &target_name)?;
 
     df.cat_num_cols_to_fill()?;
 
-    println!("{:?}", df.shape());
-
-    println! {"dopo la conversione la tabella è così:\n {}",df.tail(Some(5))};
-
-    let row = df.get_row(51)?;
-    println!("{:?}", row);
-    let row2 = df.get_row(237)?;
-    println!("{:?}", row2);
-
     //dopo le conversioni, estraggo la colonna target dal dataframe originale
-    //let v1 = df.column(&target_name)?;
+    
     let target_cols: Vec<i32> = df
         .column(&target_name)?
         .i32()?
         .into_no_null_iter()
         .collect();
-    //let target_cols = DataFrame::new(vec![v1.clone()])?;
-    //println!("stampiamo {}", target_cols.tail(Some(5)));
+    
     df.drop_in_place(&target_name)?;
 
-    println!("stampiamo dopo il drop \n {}", df.tail(Some(5)));
+    let mut sample_cols = df.scaler_encoder_df(index, &target_name)?;
 
-    let mut sample_cols = df.scaler_encoder_df(3, &target_name)?;
-
-    println! {"dopo one-hot-encoding e il resto è così: \n {}", sample_cols.tail(Some(5)) };
     println!("inizio conversione in csv");
     let mut file = File::create("example.csv").expect("could not create file");
-    CsvWriter::new(&mut file)
-    .finish(&mut sample_cols)?;
+    CsvWriter::new(&mut file).finish(&mut sample_cols)?;
     println!("fine conversione in csv");
     //convertiamo in array2
 
@@ -99,26 +92,13 @@ fn main() -> Result<(), AppError> {
     let target_col = Array1::from(target_cols);
 
     let target_col = ArrayView1::from(&target_col);
-    println!("inizio LOOCV");
+
     let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col)?;
 
     let original = ArrayView1::from(&original);
     let prediction = ArrayView1::from(&prediction);
     let mcc = get_mcc(original, prediction)?;
     println!("il valore di mcc del dataset è: {}", mcc);
-
-    // create dummy classes 0 and 1
-    let prediction = array![0, 1, 1, 1, 0, 0, 1];
-    let ground_truth = array![0, 0, 1, 0, 1, 0, 1];
-
-    // create confusion matrix
-    let cm = prediction.confusion_matrix(&ground_truth).unwrap();
-
-    println!("il valore di mcc è: {}", cm.mcc());
-
-    //TODO Interazione Main con linfa per l'addestramento
-
-    println! {"il dataset che ho selezionato è: {}\n", get_dataset_info(Some(2))?.get_csv() };
 
     Ok(())
 }
@@ -135,5 +115,3 @@ pub fn configure_the_environment() {
         env::set_var("POLARS_FMT_STR_LEN", "50"); // numero massimo di caratteri per stringhe stampati
     }
 }
-
-
