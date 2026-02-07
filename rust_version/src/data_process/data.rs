@@ -39,10 +39,10 @@ pub enum DatasetError {
 // preleva lo schema del dataset selezionato. UNICO PUNTO DI ACCESSO ESTERNO
 pub fn get_dataset_info(index: Option<usize>) -> Result<&'static DatasetInfo, DatasetError> {
     //se l'input è nullo, l'indice si riferisce al primo dataset
-    let idx = index.unwrap_or(0);
+    let idx = index.unwrap_or(3);
     DATASETS_INFO
         .get(idx)
-        .ok_or(DatasetError::IndexOutOfBounds { index: idx })
+        .ok_or(DatasetError::IndexOutOfBounds { index:idx })
 }
 
 // Istanza costante dei degli schemi dei csv supportati

@@ -3,7 +3,7 @@
 use polars::prelude::PolarsError;
 use std::io;
 
-use crate::data_process::data::DatasetError;
+use crate::{data_process::data::DatasetError, utils::data_view::ParserError};
 
 #[derive(Debug)]
 pub enum AppError {
@@ -12,6 +12,7 @@ pub enum AppError {
     Io(io::Error),
     LinfaLogistic(linfa_logistic::error::Error),
     Linfa(linfa::Error),
+    Parser(ParserError)
 
 }
 
@@ -42,5 +43,12 @@ impl From<linfa_logistic::error::Error> for AppError {
 impl From<linfa::Error> for AppError {
     fn from(e: linfa::Error) -> Self {
         AppError::Linfa(e)
+    }
+}
+
+
+impl From<ParserError> for AppError {
+    fn from(e: ParserError) -> Self {
+        AppError::Parser(e)
     }
 }

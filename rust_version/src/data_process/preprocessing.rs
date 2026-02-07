@@ -19,7 +19,7 @@ use crate::data_process::{
 pub trait ColumnsTypeConvertion {
     fn sample_target_convertion(
         &mut self,
-        df_index: usize,
+        df_index: Option<usize>,
         target_name: &str,
     ) -> Result<(), AppError>;
 }
@@ -27,11 +27,11 @@ pub trait ColumnsTypeConvertion {
 impl ColumnsTypeConvertion for DataFrame {
     fn sample_target_convertion(
         &mut self,
-        df_index: usize,
+        df_index: Option<usize>,
         target_name: &str,
     ) -> Result<(), AppError> {
         //ottengo l'Hashset dei nomi delle colonne categoriche
-        let cat_cols = get_dataset_info(Some(df_index))?
+        let cat_cols = get_dataset_info(df_index)?
             .get_cat_cols()
             .vec_to_hashset();
         //ottengo l'hashset con i nomi di tutte le colonne
@@ -320,7 +320,7 @@ impl FillNullPolars for DataFrame {
 pub trait ScalerEncoder: private::ScalersEncoders {
     fn scaler_encoder_df(
         &mut self,
-        index: usize,
+        index: Option<usize>,
         target_column: &str,
     ) -> Result<DataFrame, AppError>;
 }
@@ -328,7 +328,7 @@ pub trait ScalerEncoder: private::ScalersEncoders {
 impl ScalerEncoder for DataFrame {
     fn scaler_encoder_df(
         &mut self,
-        index: usize,
+        index: Option<usize>,
         target_column: &str,
     ) -> Result<DataFrame, AppError> {
         //genero un dataframe vuoto iniziale
@@ -337,7 +337,7 @@ impl ScalerEncoder for DataFrame {
         let binding = self.clone();
         let column_names = binding.get_column_names_str();
         //ottengo il nome delle colonne categoriche
-        let mut cat_col_names = get_dataset_info(Some(index))?
+        let mut cat_col_names = get_dataset_info(index)?
             .get_cat_cols()
             .vec_to_hashset();
         //elimino la colonna target dall'hashset

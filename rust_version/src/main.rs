@@ -26,12 +26,12 @@ fn main() -> Result<(), AppError> {
 
     let args = Args::parse();
     let index = args.dataset.and_then(| v| { Some(v[0]) });
-    let sus = args.target_columns.is_empty();
+    //let sus = args.target_columns.unwrap().is_empty();
 
     //otteniamo il dataframe polars dal percorso
     let mut df = generate_df(get_dataset_path(index)?)?;
 
-    println! {"prima della conversione, la tabella è così: \n {}", df.tail(Some(5)) };
+    println! {"Selected dataset: \n {}", df.tail(Some(5)) };
 
     //questo passaggio converte tutti dati dell'ultima colonna in i32
     let target_index = df.shape().1 - 1;
