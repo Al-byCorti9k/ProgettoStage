@@ -3,9 +3,10 @@
 //di regressione lineare
 
 use std::env;
-use std::path::Path;
+
 
 use crate::utils::data_view::Args;
+use crate::utils::dataset_from_path::{generate_df, get_dataset_path};
 use clap::Parser;
 
 use ndarray::{Array1, ArrayView1, ArrayView2};
@@ -16,7 +17,6 @@ pub mod data_process;
 pub mod machine_learning;
 pub mod utils;
 
-use crate::data_process::data::get_dataset_info;
 use crate::data_process::errors::AppError;
 use crate::data_process::preprocessing::{ColumnsTypeConvertion, FillNullPolars, ScalerEncoder};
 use crate::machine_learning::validation::{get_mcc, leave_one_out_cross_validation};
@@ -25,26 +25,11 @@ fn main() -> Result<(), AppError> {
     configure_the_environment();
 
     let args = Args::parse();
-    let index = args.dataset[0];
+    let index = args.dataset.and_then(| v| { Some(v[0]) });
+    let sus = args.target_columns.is_empty();
 
-    //iniziamo con il prendere il path
-    let starting_path = Path::new(".");
-    //vogliamo prelevare un dataset dal percorso "data"
-    let mut csv_path = starting_path.join("..").join("..").join("..").join("data");
-    //nota che join si occupa di mettere il separatore corretto per l'OS
-    //scegliamo il dataset
-    let selected_csv = get_dataset_info(Some(index))?.get_csv();
-
-    csv_path.push(selected_csv);
-
-    //ottenuto il percorso, con polars creiamo il relativo dataframe
-    let mut df = CsvReadOptions::default()
-        .with_infer_schema_length(Some(500))
-        //imposta i parametri default per la lettura del .csv
-        .try_into_reader_with_file_path(Some(csv_path.into())) //into() converte &str -> PathBuf
-        .unwrap()
-        .finish() //effettua l'effettiva conversione
-        .unwrap();
+    //otteniamo il dataframe polars dal percorso
+    let mut df = generate_df(get_dataset_path(index)?)?;
 
     println! {"prima della conversione, la tabella è così: \n {}", df.tail(Some(5)) };
 
@@ -59,6 +44,8 @@ fn main() -> Result<(), AppError> {
         .collect();
     //ottengo il nome della colonna di interesse. In questo caso l'ultima
     let target_name = sample_col_names.swap_remove(target_index);
+
+    
 
     df.sample_target_convertion(index, &target_name)?;
 
