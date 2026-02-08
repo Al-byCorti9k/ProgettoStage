@@ -22,16 +22,26 @@ use crate::data_process::preprocessing::{ColumnsTypeConvertion, FillNullPolars, 
 use crate::machine_learning::validation::{get_mcc, leave_one_out_cross_validation};
 
 fn main() -> Result<(), AppError> {
+    //configura l'apparenza dei dataframe-polars
     configure_the_environment();
+    //parsa gli argomenti da linea di comando
+    let mut args = Args::parse();
+    //effettua un controllo sugli argomenti
+    args.argument_parse()?;
+    
+    //TODO inserire un ciclo che itera sugli indici di colonna scelti e le eventuali colonne target.
 
-    let args = Args::parse();
-    let index = args.dataset.and_then(| v| { Some(v[0]) });
-    //let sus = args.target_columns.unwrap().is_empty();
+    let index = args.dataset.as_ref().and_then(| v| { Some(v[0]) });
+    let target_name = args.target_columns.as_ref().and_then(|v| { Some(v[0].clone())});
+    
+    println!("{:?}", target_name);
 
     //otteniamo il dataframe polars dal percorso
     let mut df = generate_df(get_dataset_path(index)?)?;
 
     println! {"Selected dataset: \n {}", df.tail(Some(5)) };
+    
+    args.target_columns_check(&df, target_name.unwrap().as_str())?;
 
     //questo passaggio converte tutti dati dell'ultima colonna in i32
     let target_index = df.shape().1 - 1;
