@@ -8,8 +8,7 @@ use crate::utils::data_view::Args;
 use crate::utils::dataset_from_path::{generate_df, get_dataset_path};
 use clap::Parser;
 
-use ndarray::{Array1, ArrayView1, ArrayView2};
-use polars::prelude::*;
+use ndarray::{ArrayView1, ArrayView2};
 
 pub mod data_process;
 pub mod machine_learning;
@@ -20,19 +19,17 @@ use crate::data_process::preprocessing::{ColumnsTypeConvertion, FillNullPolars, 
 use crate::machine_learning::validation::{get_mcc, leave_one_out_cross_validation};
 
 fn main() -> Result<(), AppError> {
-    
     //configura l'apparenza dei dataframe-polars
     configure_the_environment();
-    
+
     //parsa gli argomenti da linea di comando
     let mut args = Args::parse();
-    
+
     //effettua un controllo sugli argomenti
     args.argument_parse()?;
 
     //cicla sul numero di dataset inseriti. Se non sono stati inseriti, avvia il default case.
     for i in 0..args.dataset.as_ref().map(|v| v.len()).unwrap_or(1) {
-        
         //otteniamo l'indice del dataset selezionato da CLI
         let index = args.dataset.as_ref().and_then(|v| Some(v[i]));
 
@@ -78,23 +75,22 @@ fn main() -> Result<(), AppError> {
         //scalatura e one-hot encoding
         let sample_cols = df.scaler_encoder_df(index, &target_name)?;
 
-        //convertiamo in array2
-        let sample_cols = sample_cols
-            .to_ndarray::<Float64Type>(IndexOrder::Fortran)
-            .unwrap();
+        //converto in ndarray1 e ndarray2
+        let (sample_cols, target_col) = sample_cols.build_ndarrays(target_cols)?;
 
+        //ottengo le corrispettive view
         let sample_cols = ArrayView2::from(&sample_cols);
-
-        //covertiamo in array1
-        let target_col = Array1::from(target_cols);
 
         let target_col = ArrayView1::from(&target_col);
 
         //addestramento del modello, ottenimento dei valori di predizione per mcc
         let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col)?;
 
+        //ottengo le corrispettive view dei risultati
         let original = ArrayView1::from(&original);
+
         let prediction = ArrayView1::from(&prediction);
+
         //calcolo mcc
         let mcc = get_mcc(original, prediction)?;
         println!("il valore di mcc del dataset è: {} \n", mcc);
