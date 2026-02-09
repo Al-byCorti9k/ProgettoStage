@@ -19,6 +19,7 @@ use crate::data_process::preprocessing::{ColumnsTypeConvertion, FillNullPolars, 
 use crate::machine_learning::validation::{get_mcc, leave_one_out_cross_validation};
 
 fn main() -> Result<(), AppError> {
+    
     //configura l'apparenza dei dataframe-polars
     configure_the_environment();
 
@@ -84,6 +85,7 @@ fn main() -> Result<(), AppError> {
         let target_col = ArrayView1::from(&target_col);
 
         //addestramento del modello, ottenimento dei valori di predizione per mcc
+        ittapi::resume();
         let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col)?;
 
         //ottengo le corrispettive view dei risultati
