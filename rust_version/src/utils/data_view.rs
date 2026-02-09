@@ -28,9 +28,9 @@ pub enum ParserError {
     DuplicatedDataset { message: &'static str },
     MoreTargetColumnsThanDataset { message: &'static str },
     MoreDatasetThanTargetColumns { message: &'static str },
-    TargetColumnNotPresent {message: String},
-    TargetColumnNotBiCat {message: String},
-    TargetColumnNotBinary {message: String},
+    TargetColumnNotPresent { message: String },
+    TargetColumnNotBiCat { message: String },
+    TargetColumnNotBinary { message: String },
 }
 
 impl Args {
@@ -38,7 +38,7 @@ impl Args {
     pub fn argument_parse(&mut self) -> Result<(), AppError> {
         let n1 = self.check_for_duplicates_columns()?;
         let n2 = self.check_for_duplicates_dataset()?;
-        
+
         match n2 - n1 {
             //la destra dell'or è necessaria per mantenere la chiamata specifica
             //dei dataset senza senza dover obbligatoriamente inserire la t-column
@@ -56,7 +56,7 @@ impl Args {
         }
     }
     //verifica che non ci siano doppioni nelle colonne di input
-    //la verifica viene effettuata ordinando prima una copia del vec di input, 
+    //la verifica viene effettuata ordinando prima una copia del vec di input,
     //viene ordinata di modo che i doppioni siano consecutivi, e viene applicata
     //una funzione che elimina i doppioni consecutivi; se la lunghezza è variata
     //dopo il procedimento, allora vuol dire che c'erano dei doppioni. viene lanciato l'errore.
@@ -108,52 +108,70 @@ impl Args {
     }
 
     /*- verifica due condizioni:
-	- che il nome appartenga al dataset selezionato corrispondente
-	- se la prima è valida, le seguenti devono essere valide contemporaneamente:
-		- la colonna deve avere solo due categorie
-		- le due categorie devono corrispondere a 1 e 0.
+    - che il nome appartenga al dataset selezionato corrispondente
+    - se la prima è valida, le seguenti devono essere valide contemporaneamente:
+        - la colonna deve avere solo due categorie
+        - le due categorie devono corrispondere a 1 e 0.
     necessita che il dataframe polars sia già stato assemblato*/
-    pub fn target_columns_check(&mut self, df: &DataFrame, target_name: &str ) -> Result<(), AppError>{
-        
+    pub fn target_columns_check(
+        &mut self,
+        df: &DataFrame,
+        target_name: &str,
+    ) -> Result<(), AppError> {
         let column_contained = df.schema().get(target_name).is_some();
 
         match column_contained {
-
             true => self.target_column_is_bi_cat(df, target_name),
-            _ => {Err(AppError::Parser(ParserError::TargetColumnNotPresent { message: format!("target column ({}) should belongs to selected dataset", target_name) })) }
-            
+            _ => Err(AppError::Parser(ParserError::TargetColumnNotPresent {
+                message: format!(
+                    "target column ({}) should belongs to selected dataset",
+                    target_name
+                ),
+            })),
         }
-        
-        
-
     }
     //verifica che la colonna scelta abbia due categorie
-    fn target_column_is_bi_cat(&mut self, df: &DataFrame, target_name: &str) -> Result<(), AppError>{
+    fn target_column_is_bi_cat(
+        &mut self,
+        df: &DataFrame,
+        target_name: &str,
+    ) -> Result<(), AppError> {
         //calcola il numero di categorie
         let df_cat = df.group_by([target_name])?.groups()?;
         let n = df_cat[target_name].len();
         match n {
-            
             2 => self.target_column_is_binary(&df_cat, target_name),
-            _ => Err(AppError::Parser(ParserError::TargetColumnNotBiCat { message: format!("target column ({}) should contains only two categories", target_name) }))
+            _ => Err(AppError::Parser(ParserError::TargetColumnNotBiCat {
+                message: format!(
+                    "target column ({}) should contains only two categories",
+                    target_name
+                ),
+            })),
         }
     }
     // verifica che le due categorie siano 0 e 1
-    fn target_column_is_binary(&mut self, df_cat: &DataFrame, target_name: &str) -> Result<(), AppError>{
-            
-            let series = df_cat.column(target_name)?;
-            let ca = series.i64()?;
+    fn target_column_is_binary(
+        &mut self,
+        df_cat: &DataFrame,
+        target_name: &str,
+    ) -> Result<(), AppError> {
+        let series = df_cat.column(target_name)?;
+        let ca = series.i64()?;
 
-            let mask: BooleanChunked = ca.into_iter().map(|value_option| value_option.map(|value| value == 1 || value == 0)).collect();
-            
-            match mask.all() {
+        let mask: BooleanChunked = ca
+            .into_iter()
+            .map(|value_option| value_option.map(|value| value == 1 || value == 0))
+            .collect();
 
-                true => Ok(()),
+        match mask.all() {
+            true => Ok(()),
 
-                _ => {Err(AppError::Parser(ParserError::TargetColumnNotBinary { message: format!("target column ({}) should be binary for logistic regression's computation", target_name) }))}
-                
-            }
-
+            _ => Err(AppError::Parser(ParserError::TargetColumnNotBinary {
+                message: format!(
+                    "target column ({}) should be binary for logistic regression's computation",
+                    target_name
+                ),
+            })),
+        }
     }
-    
 }

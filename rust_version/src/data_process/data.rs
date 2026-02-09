@@ -42,7 +42,7 @@ pub fn get_dataset_info(index: Option<usize>) -> Result<&'static DatasetInfo, Da
     let idx = index.unwrap_or(3);
     DATASETS_INFO
         .get(idx)
-        .ok_or(DatasetError::IndexOutOfBounds { index:idx })
+        .ok_or(DatasetError::IndexOutOfBounds { index: idx })
 }
 
 // Istanza costante dei degli schemi dei csv supportati

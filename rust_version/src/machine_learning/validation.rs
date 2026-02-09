@@ -1,9 +1,9 @@
+use crate::data_process::errors::AppError;
+use indicatif::{ParallelProgressIterator, ProgressStyle};
 use linfa::prelude::*;
 use linfa_logistic::LogisticRegression;
 use ndarray::{ArrayView1, ArrayView2};
 use rayon::prelude::*;
-use crate::data_process::errors::AppError;
-use indicatif::{ParallelProgressIterator, ProgressStyle};
 
 //metodo pubblico che riceve in input i samples
 // e il target nel formato ndarray e restituisce
@@ -15,7 +15,9 @@ pub fn leave_one_out_cross_validation<'a>(
     let dataset = DatasetView::new(samples, target);
     //otteniamo il numero di campioni (righe)
     let n = dataset.nsamples();
-    let style: ProgressStyle = ProgressStyle::with_template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
+    let style: ProgressStyle = ProgressStyle::with_template(
+        "[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}",
+    )
     .unwrap()
     .progress_chars("##-");
     // Trasformiamo le fold in un vettore per poter usare par_iter
@@ -23,7 +25,7 @@ pub fn leave_one_out_cross_validation<'a>(
 
     // Eseguiamo la computazione in parallelo grazie a Rayon
     let results: Result<Vec<(i32, i32)>, AppError> = folds
-    //genera iteratori che lavorano in parallelo
+        //genera iteratori che lavorano in parallelo
         .into_par_iter()
         .progress_with_style(style)
         .map(|(train, valid)| {
@@ -31,10 +33,10 @@ pub fn leave_one_out_cross_validation<'a>(
                 .max_iterations(50)
                 .with_intercept(true)
                 .fit(&train)
-                .map_err(AppError::from)?; 
+                .map_err(AppError::from)?;
 
             let pred = model.predict(&valid);
-            
+
             // Estraiamo il valore reale e quello predetto
             let true_val = valid.targets()[0];
             let pred_val = pred[0];

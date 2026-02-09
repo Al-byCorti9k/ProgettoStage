@@ -22,6 +22,10 @@ pub trait ColumnsTypeConvertion {
         df_index: Option<usize>,
         target_name: &str,
     ) -> Result<(), AppError>;
+
+    fn get_last_column_name(&mut self) -> String;
+
+    fn unwrapping_column(&mut self, target_column: Option<&str>) -> String;
 }
 
 impl ColumnsTypeConvertion for DataFrame {
@@ -31,9 +35,7 @@ impl ColumnsTypeConvertion for DataFrame {
         target_name: &str,
     ) -> Result<(), AppError> {
         //ottengo l'Hashset dei nomi delle colonne categoriche
-        let cat_cols = get_dataset_info(df_index)?
-            .get_cat_cols()
-            .vec_to_hashset();
+        let cat_cols = get_dataset_info(df_index)?.get_cat_cols().vec_to_hashset();
         //ottengo l'hashset con i nomi di tutte le colonne
         let binding = self.clone();
         let col_names = binding.get_column_names_str();
@@ -47,6 +49,27 @@ impl ColumnsTypeConvertion for DataFrame {
         self.apply(target_name, |s| s.cast(&DataType::Int32).unwrap())?;
 
         Ok(())
+    }
+
+    fn get_last_column_name(&mut self) -> String {
+        //creo un iteratore, poi mappo su ogni elemento la chiusura che converte in stringa, dopo converto nella collezione
+        let mut sample_col_names: Vec<String> = self
+            .get_column_names()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        //questo passaggio converte tutti dati dell'ultima colonna in i32
+        let target_index = self.shape().1 - 1;
+        //ottengo il nome della colonna di interesse. In questo caso l'ultima
+        let target_name = sample_col_names.swap_remove(target_index);
+        target_name
+    }
+
+    fn unwrapping_column(&mut self, target_column: Option<&str>) -> String {
+        match target_column {
+            None => self.get_last_column_name(),
+            Some(col) => col.to_string(),
+        }
     }
 }
 
@@ -337,9 +360,7 @@ impl ScalerEncoder for DataFrame {
         let binding = self.clone();
         let column_names = binding.get_column_names_str();
         //ottengo il nome delle colonne categoriche
-        let mut cat_col_names = get_dataset_info(index)?
-            .get_cat_cols()
-            .vec_to_hashset();
+        let mut cat_col_names = get_dataset_info(index)?.get_cat_cols().vec_to_hashset();
         //elimino la colonna target dall'hashset
         cat_col_names.remove(target_column);
 

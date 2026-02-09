@@ -12,8 +12,7 @@ pub enum AppError {
     Io(io::Error),
     LinfaLogistic(linfa_logistic::error::Error),
     Linfa(linfa::Error),
-    Parser(ParserError)
-
+    Parser(ParserError),
 }
 
 impl From<PolarsError> for AppError {
@@ -45,7 +44,6 @@ impl From<linfa::Error> for AppError {
         AppError::Linfa(e)
     }
 }
-
 
 impl From<ParserError> for AppError {
     fn from(e: ParserError) -> Self {
