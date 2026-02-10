@@ -4,8 +4,9 @@
 
 use std::env;
 
+use crate::data_process::data::view_dataset;
 use crate::utils::data_view::Args;
-use crate::utils::dataset_from_path::{generate_df, get_dataset_path};
+use crate::utils::dataset_from_path::{ResultData, generate_df, get_dataset_path};
 use clap::Parser;
 
 use ndarray::{ArrayView1, ArrayView2};
@@ -16,18 +17,24 @@ pub mod utils;
 
 use crate::data_process::errors::AppError;
 use crate::data_process::preprocessing::{ColumnsTypeConvertion, FillNullPolars, ScalerEncoder};
-use crate::machine_learning::validation::{get_mcc, leave_one_out_cross_validation};
+use crate::machine_learning::validation::get_metrics;
 
 fn main() -> Result<(), AppError> {
-    
     //configura l'apparenza dei dataframe-polars
     configure_the_environment();
 
     //parsa gli argomenti da linea di comando
     let mut args = Args::parse();
 
+    if args.list {
+        view_dataset()?;
+        return Ok(());
+    }
+
     //effettua un controllo sugli argomenti
     args.argument_parse()?;
+
+    let mut final_results = ResultData::new();
 
     //cicla sul numero di dataset inseriti. Se non sono stati inseriti, avvia il default case.
     for i in 0..args.dataset.as_ref().map(|v| v.len()).unwrap_or(1) {
@@ -46,6 +53,10 @@ fn main() -> Result<(), AppError> {
 
         //visualizziamo il dataframe
         println! {"\n Selected dataset: \t {} \n {}", dataset_name, df.tail(Some(5)) };
+        //non vengono effettuati ulteriori conti se è stata selezionata questa opzione
+        if args.view {
+            continue;
+        }
 
         //estraiamo il nome. Se l'option è None, ritorna il nome dell'ultima colonna
         let target_name = df.unwrapping_column(target_name.as_deref());
@@ -84,19 +95,26 @@ fn main() -> Result<(), AppError> {
 
         let target_col = ArrayView1::from(&target_col);
 
-        //addestramento del modello, ottenimento dei valori di predizione per mcc
-        ittapi::resume();
-        let (original, prediction) = leave_one_out_cross_validation(sample_cols, target_col)?;
+        //otteniamo le metriche
+        let metrics = get_metrics(sample_cols, target_col, args.energy)?;
 
-        //ottengo le corrispettive view dei risultati
-        let original = ArrayView1::from(&original);
+        //salvo tutte le informazioni dell'iterazione corrente nella struct
+        //results
+        let os = std::env::consts::OS;
 
-        let prediction = ArrayView1::from(&prediction);
-
-        //calcolo mcc
-        let mcc = get_mcc(original, prediction)?;
-        println!("il valore di mcc del dataset è: {} \n", mcc);
+        final_results.add_record(
+            dataset_name,
+            os,
+            metrics.time,
+            metrics.time / 1000.0,
+            target_name.as_str(),
+            metrics.mcc,
+            metrics.energy,
+        );
     }
+    //Scrive il csv con i risultati
+    final_results.write_csv()?;
+    println!("csv built at \"Results\" folder");
     Ok(())
 }
 
@@ -110,5 +128,6 @@ pub fn configure_the_environment() {
         env::set_var("POLARS_FMT_MAX_COLS", "20"); // per settare il numero massimo di colonne mostrate
         env::set_var("POLARS_FMT_MAX_ROWS", "10"); // stesso ma per le righe
         env::set_var("POLARS_FMT_STR_LEN", "50"); // numero massimo di caratteri per stringhe stampati
+        env::set_var("POLARS_FMT_TABLE_HIDE_COLUMN_DATA_TYPES", "1"); //nasconde il dtype delle colonne
     }
 }

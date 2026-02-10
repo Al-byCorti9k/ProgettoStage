@@ -1,18 +1,40 @@
 // modulo che implementa la gestione delle istruzioni da linea di comando
 // e la stampa dei risultati a schermo
 
-use clap::Parser;
+use clap::{Parser, ArgAction};
 use polars::{frame::DataFrame, prelude::BooleanChunked};
 
 use crate::data_process::errors::AppError;
 
 #[derive(Parser, Debug)]
-#[command(version, about = "\n A program to compute LOOCV, its execution time, and energy consumption (kWh).", long_about = None )]
+#[command(version, about = " \n\n A program to compute LOOCV, its execution time, and energy consumption (kWh).", long_about = None )]
 pub struct Args {
     #[arg(short, long, help = "select target column from its name.", num_args(1..))]
     pub target_columns: Option<Vec<String>>,
     #[arg(short, long, help = "select a dataset from its number", num_args(1..))]
     pub dataset: Option<Vec<usize>>,
+    #[arg(
+        short, 
+        long, 
+        default_value_t = true, 
+        action = ArgAction::SetFalse,
+        help = "Disable energy computation (defaults to true)"
+    )]
+    pub energy: bool,
+    #[arg(
+        short, 
+        long, 
+        action = ArgAction::SetTrue, 
+        help = "get visual snapshots of selected datasets (defaults to false)"
+    )]
+    pub view: bool,
+    #[arg(
+        short, 
+        long, 
+        action = ArgAction::SetTrue, 
+        help = "List of selectable datasets (defaults to false)"
+    )]
+    pub list: bool,
 }
 //metodo per la struct args che fa in modo che non ci siano argomenti ripetuti
 //per dataset e column, inoltre se column.len != dataset.len, pareggia.

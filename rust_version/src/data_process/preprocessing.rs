@@ -1,8 +1,8 @@
 //libreria di funzioni per il preprocessing
 
+use ndarray::{Array1, Array2};
 use polars::prelude::*;
 use std::collections::HashMap;
-use ndarray::{Array1, Array2};
 //necessario per il calcolo della moda con valori che possono
 //essere
 use ordered_float::NotNan;
@@ -26,10 +26,9 @@ pub trait ColumnsTypeConvertion {
     fn get_last_column_name(&mut self) -> String;
 
     fn unwrapping_column(&mut self, target_column: Option<&str>) -> String;
-      
-    fn build_ndarrays(&self, target_cols: Vec<i32>) -> Result<(Array2<f64>, Array1<i32>), AppError>;
 
-
+    fn build_ndarrays(&self, target_cols: Vec<i32>)
+    -> Result<(Array2<f64>, Array1<i32>), AppError>;
 }
 
 impl ColumnsTypeConvertion for DataFrame {
@@ -76,18 +75,17 @@ impl ColumnsTypeConvertion for DataFrame {
         }
     }
     fn build_ndarrays(
-    &self,
-    target_cols: Vec<i32>,
-) -> Result<(Array2<f64>, Array1<i32>), AppError> {
-    // features: f64
-    let sample_arr =
-        self.to_ndarray::<Float64Type>(IndexOrder::Fortran)?;
+        &self,
+        target_cols: Vec<i32>,
+    ) -> Result<(Array2<f64>, Array1<i32>), AppError> {
+        // features: f64
+        let sample_arr = self.to_ndarray::<Float64Type>(IndexOrder::Fortran)?;
 
-    // target: i32
-    let target_arr = Array1::from(target_cols);
+        // target: i32
+        let target_arr = Array1::from(target_cols);
 
-    Ok((sample_arr, target_arr))
-}
+        Ok((sample_arr, target_arr))
+    }
 }
 
 //abbiamo creato l'interfaccia per un metodo per ottenere dalla colonna

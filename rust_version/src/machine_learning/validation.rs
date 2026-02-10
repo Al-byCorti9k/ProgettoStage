@@ -4,11 +4,52 @@ use linfa::prelude::*;
 use linfa_logistic::LogisticRegression;
 use ndarray::{ArrayView1, ArrayView2};
 use rayon::prelude::*;
+use std::time::Instant;
+
+pub fn get_metrics<'a>(
+    samples: ArrayView2<'a, f64>,
+    target: ArrayView1<'a, i32>,
+    energy_computation: bool,
+) -> Result<Metrics, AppError> {
+    let mut metrics = Metrics::new();
+
+    let (original, prediction, time) = match energy_computation {
+        true => {
+            let start = Instant::now();
+
+            let (original, prediction) = leave_one_out_cross_validation(samples, target)?;
+
+            let elapsed = start.elapsed();
+
+            (original, prediction, elapsed.as_secs_f64())
+        }
+        _ => {
+            let start = Instant::now();
+
+            let (original, prediction) = leave_one_out_cross_validation(samples, target)?;
+
+            let elapsed = start.elapsed();
+
+            (original, prediction, elapsed.as_secs_f64())
+        }
+    };
+
+    //ottengo le corrispettive view dei risultati
+    let original = ArrayView1::from(&original);
+    let prediction = ArrayView1::from(&prediction);
+
+    let mcc = get_mcc(original, prediction)?;
+    metrics.set_mcc(mcc);
+    metrics.set_time(time);
+    metrics.set_energy(0.0);
+
+    Ok(metrics)
+}
 
 //metodo pubblico che riceve in input i samples
 // e il target nel formato ndarray e restituisce
 //una reference
-pub fn leave_one_out_cross_validation<'a>(
+fn leave_one_out_cross_validation<'a>(
     samples: ArrayView2<'a, f64>,
     target: ArrayView1<'a, i32>,
 ) -> Result<(Vec<i32>, Vec<i32>), AppError> {
@@ -53,10 +94,7 @@ pub fn leave_one_out_cross_validation<'a>(
 
 //restituisce l'MCC. Ha bisogno di riceve in input i risultati della Leave One out folding.
 
-pub fn get_mcc<'a>(
-    y_true: ArrayView1<'a, i32>,
-    y_pred: ArrayView1<'a, i32>,
-) -> Result<f32, AppError> {
+fn get_mcc<'a>(y_true: ArrayView1<'a, i32>, y_pred: ArrayView1<'a, i32>) -> Result<f32, AppError> {
     let y_true: ndarray::ArrayBase<ndarray::OwnedRepr<usize>, ndarray::Dim<[usize; 1]>> =
         y_true.to_owned().mapv(|x| x as usize);
     let y_pred = y_pred.to_owned().mapv(|x| x as usize);
@@ -66,4 +104,35 @@ pub fn get_mcc<'a>(
 
     //restituiamo l'mcc
     Ok(cm.mcc())
+}
+//struttura dati che contiene le metriche calcolate dal metodo get_metrics
+#[derive(Debug, Clone)]
+pub struct Metrics {
+    pub mcc: f32,
+    pub time: f64,
+    pub energy: f64,
+}
+//metodi per inizializzare metrics e settare le metriche
+impl Metrics {
+    pub fn new() -> Self {
+        Self {
+            mcc: 0.0,
+            time: 0.0,
+            energy: 0.0,
+        }
+    }
+
+    // --- Metodi Setter (Pattern Fluente) ---
+
+    fn set_time(&mut self, time: f64) {
+        self.time = time;
+    }
+
+    fn set_energy(&mut self, energy: f64) {
+        self.energy = energy;
+    }
+
+    fn set_mcc(&mut self, mcc: f32) {
+        self.mcc = mcc;
+    }
 }

@@ -2,6 +2,8 @@
 
 use std::collections::HashSet;
 
+use crate::data_process::errors::AppError;
+
 const DATASETS: [&str; 5] = [
     "journal.pone.0148699_S1_Text_Sepsis_SIRS_EDITED.csv",
     "10_7717_peerj_5665_dataYM2018_neuroblastoma.csv",
@@ -95,7 +97,43 @@ const DATASETS_INFO: &[DatasetInfo] = &[
         categorical_cols: &["sex_0man_1woman", "insulin_regimen_binary"],
     },
 ];
+//definisco metodi utili per stampare i nomi dei dataset a schermo, serve per una visualizzazione rapida
+#[derive(Clone, Copy)]
+enum Dataset {
+    Sepsis,
+    Neuroblastoma,
+    DepressionHeart,
+    CardiacArrest,
+    Diabetes,
+}
 
+impl Dataset {
+    fn as_str(self) -> &'static str {
+        match self {
+            Dataset::Sepsis => "sepsis = 0",
+            Dataset::Neuroblastoma => "neuroblastoma = 1",
+            Dataset::DepressionHeart => "depressionheart = 2",
+            Dataset::CardiacArrest => "cardiacarrest = 3",
+            Dataset::Diabetes => "diabetes = 4",
+        }
+    }
+}
+
+pub fn view_dataset() -> Result<(), AppError> {
+    let datasets = [
+        Dataset::Sepsis,
+        Dataset::Neuroblastoma,
+        Dataset::DepressionHeart,
+        Dataset::CardiacArrest,
+        Dataset::Diabetes,
+    ];
+
+    for d in datasets {
+        println!("{}", d.as_str());
+    }
+
+    Ok(())
+}
 //i trait sono simili come concetto alle interfacce di Java. In questo caso
 //espandiamo le funzionalità con un metodo per convertire le slice di stringhe
 //in HashSet. Servirà per avere accesso alle colonne categoriche in tempo
