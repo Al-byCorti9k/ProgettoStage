@@ -7,7 +7,6 @@ description = "A program to compute LOOCV, its execution time, and energy consum
 [dependencies]
 chrono = "0.4.43"
 clap = { version = "4.5.57", features = ["derive"] }
-energy-bench = "0.2.2"
 indicatif = {version = "0.18.3", features = ["rayon"]}
 ittapi = "0.5.0"
 linfa = "0.8.1"

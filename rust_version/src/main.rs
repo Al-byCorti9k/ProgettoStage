@@ -96,7 +96,7 @@ fn main() -> Result<(), AppError> {
         let target_col = ArrayView1::from(&target_col);
 
         //otteniamo le metriche
-        let metrics = get_metrics(sample_cols, target_col, args.energy)?;
+        let metrics = get_metrics(sample_cols, target_col)?;
 
         //salvo tutte le informazioni dell'iterazione corrente nella struct
         //results

@@ -9,30 +9,15 @@ use std::time::Instant;
 pub fn get_metrics<'a>(
     samples: ArrayView2<'a, f64>,
     target: ArrayView1<'a, i32>,
-    energy_computation: bool,
 ) -> Result<Metrics, AppError> {
+
     let mut metrics = Metrics::new();
 
-    let (original, prediction, time) = match energy_computation {
-        true => {
-            let start = Instant::now();
+    let start = Instant::now();
 
-            let (original, prediction) = leave_one_out_cross_validation(samples, target)?;
+    let (original, prediction) = leave_one_out_cross_validation(samples, target)?;
 
-            let elapsed = start.elapsed();
-
-            (original, prediction, elapsed.as_secs_f64())
-        }
-        _ => {
-            let start = Instant::now();
-
-            let (original, prediction) = leave_one_out_cross_validation(samples, target)?;
-
-            let elapsed = start.elapsed();
-
-            (original, prediction, elapsed.as_secs_f64())
-        }
-    };
+    let time = start.elapsed().as_secs_f64();
 
     //ottengo le corrispettive view dei risultati
     let original = ArrayView1::from(&original);

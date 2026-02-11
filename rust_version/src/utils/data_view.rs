@@ -16,14 +16,6 @@ pub struct Args {
     #[arg(
         short, 
         long, 
-        default_value_t = true, 
-        action = ArgAction::SetFalse,
-        help = "Disable energy computation (defaults to true)"
-    )]
-    pub energy: bool,
-    #[arg(
-        short, 
-        long, 
         action = ArgAction::SetTrue, 
         help = "get visual snapshots of selected datasets (defaults to false)"
     )]
