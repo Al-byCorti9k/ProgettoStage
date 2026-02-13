@@ -12,16 +12,28 @@ def mj_to_kwh(energy_in_mj):
 
 def get_energy_from_vtune_csv(f_csv):
     """Estrae il valore energetico associato a Package_0 dal CSV di VTune."""
+    energy = []
+    
     try:
-        with open(f_csv, 'rt') as f:
+        with open(f_csv, 'rt', encoding='utf-8') as f:
             reader = csv.reader(f)
             for row in reader:
                 if any("Package_0" in cell for cell in row):
-                    # Restituisce il valore numerico (colonna 2)
-                    return float(row[2]) 
-    except Exception as e:
-        print(f"Nota: Impossibile estrarre dati da {f_csv.name}: {e}")
-    return 0.0
+                    energy.append(row)
+                    
+        # Verifichiamo che la lista contenga abbastanza elementi prima di accedere
+        if len(energy) >= 2 and len(energy[1]) >= 3:
+            return energy[1][2]
+        else:
+            print("VTune Profiler non è riuscito ad ottenere i consumi energetici")
+            return 0.0
+
+    except FileNotFoundError:
+        print(f"Errore: Il file {f_csv} non è stato trovato.")
+        return 0.0
+    except (OSError, csv.Error) as e:
+        print(f"Nota: Impossibile leggere dati da {f_csv}: {e}")
+        return 0.0
 
 def get_latest_experiment_file(directory):
     """Trova il file experiment_rust_...csv con la data di modifica più recente."""

@@ -112,7 +112,7 @@ impl ResultData {
 
             writeln!(
                 file,
-                "{},{},{},{},{},{},{},{}",
+                "\"{}\",{},\"{}\",{},{},{},{},{}",
                 self.dataset[i],
                 self.os[i],
                 self.target_column[i],
