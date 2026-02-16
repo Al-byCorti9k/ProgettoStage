@@ -45,9 +45,13 @@ func main() {
 	//fmt.Println(a.VecToHashSet())
 	fmt.Println(dfInfo.Df.Names())
 
-	dfSAS := dfInfo2.OneHotEncoding()
+	dfSAS := dfInfo2.StandardScalar()
 
 	fmt.Println(dfSAS.Df)
+
+	dfSES := dfSAS.OneHotEncoding()
+
+	fmt.Println(dfSES.Df)
 
 	f, err := os.Create("output.csv")
 	if err != nil {
@@ -56,7 +60,7 @@ func main() {
 	defer f.Close()
 
 	// 3. Esportiamo il DataFrame nel file
-	err = dfSAS.Df.WriteCSV(f)
+	err = dfSES.Df.WriteCSV(f)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -214,3 +214,45 @@ func columnToDummies(dfInfo *DataframeInfo, targetColumn string) DataframeInfo {
 
 	return newDfInfo
 }
+
+// implementazione custom della scalatura standard
+func (self *DataframeInfo) StandardScalar() DataframeInfo {
+
+	// Otteniamo i nomi delle colonne
+	colsInfo, _ := GetDatasetInfo(&self.Id)
+	catCols := colsInfo.VecToHashSet()
+	//prendo tutte le colonne che non sono categoriche
+	allCols := self.Df.Names()
+
+	// Inizializziamo dfWorking con il dataframe originale
+	dfWorking := self.Df
+
+	for _, col := range allCols {
+		colToCheck := dfWorking.Col(col)
+		//per capire se sia categorica o meno
+		_, exists := catCols[col]
+		if !exists {
+
+			mean := dfWorking.Col(col).Mean()
+			std := dfWorking.Col(col).StdDev()
+
+			if std == 0 {
+				continue
+			}
+
+			normalizedCol := colToCheck.Map(func(element series.Element) series.Element {
+				val := element.Float()
+				z := (val - mean) / std
+				element.Set(z)
+				return element
+			})
+
+			// Sostituiamo la colonna nel dataframe
+			dfWorking = dfWorking.Mutate(normalizedCol)
+		}
+
+	}
+
+	return DataframeInfoBuild(self.Id, &dfWorking)
+
+}
