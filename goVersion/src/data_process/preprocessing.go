@@ -150,11 +150,12 @@ func fillMissingValues(s *series.Series, replacement float64) []float64 {
 }
 
 // si occupa di gestire il one-hot encoding su tutte le colonne categoriche del dataframe
-func (self *DataframeInfo) OneHotEncoding() DataframeInfo {
+func (self *DataframeInfo) OneHotEncoding(targetColumn string) DataframeInfo {
 	//ottengo l'hashset relativo alle colonne categoriche
 	info, _ := GetDatasetInfo(&self.Id)
 
 	catCols := info.VecToHashSet()
+	delete(catCols, targetColumn)
 
 	currentResult := *self
 	//chiamo toDummies su tutte le colonne categoriche

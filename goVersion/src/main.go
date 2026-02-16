@@ -9,6 +9,8 @@ import (
 	dataprocess "github.com/Al-byCorti9k/ProgettoStage/goVersion/src/data_process"
 
 	cli "github.com/Al-byCorti9k/ProgettoStage/goVersion/src/cli_tools"
+
+	learning "github.com/Al-byCorti9k/ProgettoStage/goVersion/src/machine_learning"
 )
 
 func main() {
@@ -49,7 +51,7 @@ func main() {
 
 	fmt.Println(dfSAS.Df)
 
-	dfSES := dfSAS.OneHotEncoding()
+	dfSES := dfSAS.OneHotEncoding(targetColumn)
 
 	fmt.Println(dfSES.Df)
 
@@ -64,5 +66,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	sas, err := learning.ConvertGotaToGolearn(dfSES.Df)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(sas)
 
 }
