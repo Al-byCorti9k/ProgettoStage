@@ -2,6 +2,8 @@ package dataprocess
 
 import (
 	"fmt"
+
+	"github.com/go-gota/gota/dataframe"
 )
 
 // Nomi dei file csv disponibili
@@ -88,4 +90,46 @@ func (d *DatasetInfo) VecToHashSet() HashSet[string] {
 		set[v] = struct{}{}
 	}
 	return set
+}
+
+// una struct che contiene il dataframe e il suo nome
+type DataframeInfo struct {
+	Id     int
+	DfName string
+	Df     dataframe.DataFrame
+}
+
+// costruisco la struct contenente nome e dataframe. serve l'ID di input
+func DataframeInfoBuild(dfID int, df *dataframe.DataFrame) DataframeInfo {
+	var dfInfo DataframeInfo
+
+	dfInfo.setNameById(dfID)
+	dfInfo.setDataframe(df)
+	dfInfo.setDataframeID(dfID)
+
+	return dfInfo
+
+}
+
+// setter del nome del dataframe
+func (di *DataframeInfo) setNameById(dfID int) {
+	names := [5]string{
+		"SEPSIS",
+		"NEUROBLASTOMA",
+		"DEPRESSION_HEART",
+		"CARDIAC_ARREST",
+		"DIABETES",
+	}
+
+	di.DfName = names[dfID]
+}
+
+// setter del dataframe gota
+func (di *DataframeInfo) setDataframe(newDf *dataframe.DataFrame) {
+	di.Df = *newDf
+}
+
+// setter dell'ID del dataframe
+func (di *DataframeInfo) setDataframeID(newID int) {
+	di.Id = newID
 }

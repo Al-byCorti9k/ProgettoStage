@@ -7,7 +7,10 @@ import (
 	"fmt"
 	"log"
 
+	dataprocess "github.com/Al-byCorti9k/ProgettoStage/goVersion/src/data_process"
 	pflag "github.com/spf13/pflag"
+
+	"github.com/go-gota/gota/dataframe"
 )
 
 // struttura dati che rappresenta i valori dati in input ai vari flags
@@ -16,6 +19,7 @@ type ConfigArgs struct {
 	CArgs []string
 }
 
+// funzione che parsa gli argomenti da linea di comando ed effettua i controlli
 func ParseCliArgument() ConfigArgs {
 
 	var myArgs ConfigArgs
@@ -28,13 +32,14 @@ func ParseCliArgument() ConfigArgs {
 	pflag.Parse()
 	//effettuo il controllo degli argomenti. Il controllo sulla colonna è
 	//effettuabile solo quando si crea il dataframe
-	ArgsParse(&myArgs)
+	argsParse(&myArgs)
 
 	//se non ci sono stati errori, ritorna gli argomenti parsati
 	return myArgs
 }
 
-func ArgsParse(myArgs *ConfigArgs) {
+// funzione che controlla se gli argomenti siano validi
+func argsParse(myArgs *ConfigArgs) {
 	// Se isValid restituisce un errore, log.Fatal lo stampa e chiude il programma
 	if err := myArgs.isValid(); err != nil {
 		log.Fatalf("Configuration's error: %v", err)
@@ -88,5 +93,92 @@ func (c *ConfigArgs) isValid() error {
 	if c.hasDuplicateTargets() {
 		return errors.New("Error: Duplicated target column'names.")
 	}
+	return nil
+}
+
+// effettua verifiche sulle colonne di target selezionate
+func InputColumnsCheck(dfInfo *dataprocess.DataframeInfo, columnName *string) {
+	err := dfContainsTargetColumn(dfInfo, columnName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err2 := targetColumnIsCategorical(dfInfo, columnName)
+
+	if err2 != nil {
+		log.Fatal(err2)
+	}
+
+	err3 := targetColumnIsBinary(dfInfo, columnName)
+
+	if err3 != nil {
+		log.Fatal(err3)
+	}
+
+}
+
+// verifica che una colonna appartenga ad un dataframe
+func dfContainsTargetColumn(dfInfo *dataprocess.DataframeInfo, columnName *string) error {
+
+	r, c := dfInfo.Df.Select(*columnName).Dims()
+
+	if r == 0 && c == 0 {
+		return fmt.Errorf("target column \"%s\" doesn't belong to dataframe \"%s\"", *columnName, dfInfo.DfName)
+	}
+
+	return nil
+}
+
+// controlla se la colonna target è una colonna categorica
+func targetColumnIsCategorical(dfInfo *dataprocess.DataframeInfo, columnName *string) error {
+
+	//ottengo da dataframeInfo l'ID, con cui ottengo le colonne categoriche
+	info, _ := dataprocess.GetDatasetInfo(&dfInfo.Id)
+
+	_, ok := info.VecToHashSet()[*columnName]
+
+	if !ok {
+		return fmt.Errorf("target column \"%s\" is not a categorical column for \"%s\" dataset", *columnName, dfInfo.DfName)
+	}
+
+	return nil
+}
+
+// controlla se la colonna categorica target abbia solo due categorie (0 e 1)
+func targetColumnIsBinary(dfInfo *dataprocess.DataframeInfo, columnName *string) error {
+	//crea un gruppo sulla colonna su cui effettuare calcoli
+	groups := dfInfo.Df.GroupBy(*columnName)
+	//aggrega creando un nuovo dataframe con tante righe quante le differenti
+	//categorie
+	aggregatedDf := groups.Aggregation([]dataframe.AggregationType{dataframe.Aggregation_COUNT}, []string{*columnName})
+	//calcoliamo il numero delle categorie attraverso il numero delle righe
+	groupsNumber := aggregatedDf.Nrow()
+	//se le righe non sono due, allora la colonna target non è bicategorica
+	if groupsNumber != 2 {
+
+		return fmt.Errorf("target column \"%s\" is not bicategorical", *columnName)
+	}
+	//estraiamo i valori della categoria come uno slice di stringhe
+	categories := aggregatedDf.Col(*columnName).Records()
+
+	// Verifichiamo se le categorie sono esattamente "0" e "1"
+	// Usiamo una mappa per gestire il fatto che l'ordine potrebbe variare
+	valid := true
+	checkMap := map[string]bool{"0": false, "1": false}
+	//se c'è anche un solo valore discordante, il ciclo di ferma
+	for _, cat := range categories {
+		if _, exists := checkMap[cat]; exists {
+			checkMap[cat] = true
+		} else {
+			valid = false
+			break
+		}
+	}
+
+	// Controllo finale: devono essere validi e entrambi trovati (true)
+	if !(valid && checkMap["0"] && checkMap["1"]) {
+		return fmt.Errorf("Error: target column is not binary")
+	}
+
 	return nil
 }

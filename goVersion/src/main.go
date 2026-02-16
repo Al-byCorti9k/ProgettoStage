@@ -21,8 +21,13 @@ func main() {
 	fmt.Println(num)
 	df := dataprocess.GetDataframeFromID(args.DArgs[0])
 
-	fmt.Println(df)
+	dfInfo := dataprocess.DataframeInfoBuild(args.DArgs[0], &df)
+	println(args.CArgs[0])
+	cli.InputColumnsCheck(&dfInfo, &args.CArgs[0])
+
+	fmt.Println(dfInfo)
 
 	//fmt.Println(a.VecToHashSet())
+	fmt.Println(dfInfo.Df.Names())
 
 }
