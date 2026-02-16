@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	//"os"
+	"os"
 
 	dataprocess "github.com/Al-byCorti9k/ProgettoStage/goVersion/src/data_process"
 
@@ -45,17 +45,20 @@ func main() {
 	//fmt.Println(a.VecToHashSet())
 	fmt.Println(dfInfo.Df.Names())
 
-	/*
-		f, err := os.Create("output.csv")
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer f.Close()
+	dfSAS := dfInfo2.OneHotEncoding()
 
-		// 3. Esportiamo il DataFrame nel file
-		err = dfInfo2.Df.WriteCSV(f)
-		if err != nil {
-			log.Fatal(err)
-		}
-	*/
+	fmt.Println(dfSAS.Df)
+
+	f, err := os.Create("output.csv")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	// 3. Esportiamo il DataFrame nel file
+	err = dfSAS.Df.WriteCSV(f)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }

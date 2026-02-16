@@ -2,8 +2,10 @@ package dataprocess
 
 import (
 	//"github.com/go-gota/gota/dataframe"
+	"fmt"
+
 	"github.com/go-gota/gota/series"
-	//"fmt"
+
 	//"log"
 	"math"
 )
@@ -145,4 +147,70 @@ func fillMissingValues(s *series.Series, replacement float64) []float64 {
 		}
 	}
 	return vals
+}
+
+// si occupa di gestire il one-hot encoding su tutte le colonne categoriche del dataframe
+func (self *DataframeInfo) OneHotEncoding() DataframeInfo {
+	//ottengo l'hashset relativo alle colonne categoriche
+	info, _ := GetDatasetInfo(&self.Id)
+
+	catCols := info.VecToHashSet()
+
+	currentResult := *self
+	//chiamo toDummies su tutte le colonne categoriche
+	for cat := range catCols {
+		currentResult = columnToDummies(&currentResult, cat)
+	}
+	//restituisco il dataframeInfo con il nuovo dataframe dove le colonne hanno
+	//subito il one-hot-encoding
+	return currentResult
+}
+
+// implementazione custom del one-hot-encoding. Lavora solo su una colonna
+func columnToDummies(dfInfo *DataframeInfo, targetColumn string) DataframeInfo {
+
+	//ottengo la colonna come slice stringa e calcolo la lunghezza
+	records := dfInfo.Df.Col(targetColumn).Records()
+	numRows := len(records)
+
+	// Otteniamo i valori univoci usando una mappa (set)
+	uniqueMap := make(map[string]bool)
+	//questa slice mantiene tutti i valori unici generati
+	var uniqueValues []string
+	//se un elemento non si trova nella mappa, viene aggiunto in uniqueMap e anche nella slice
+	for _, val := range records {
+		if !uniqueMap[val] {
+			uniqueMap[val] = true
+			uniqueValues = append(uniqueValues, val)
+		}
+	}
+	dfWorking := dfInfo.Df
+
+	//Generiamo le colonne One-Hot
+	for _, val := range uniqueValues {
+		// Creiamo una slice di float64 per la nuova colonna
+		dummyData := make([]float64, numRows)
+		//se è uguale alla categoria mette 1, altrimenti 0
+		for i, rowVal := range records {
+			if rowVal == val {
+				dummyData[i] = 1.0
+			} else {
+				dummyData[i] = 0.0
+			}
+		}
+		//generiamo il nuovo nome per la colonna
+		colName := fmt.Sprintf("%s_%s", targetColumn, val)
+		//generiamo la nuova colonna
+		newCol := series.Floats(dummyData)
+
+		// Impostiamo il nome alla nuova serie
+		newCol.Name = colName
+		//modifichiamo la colonna dal dataframe originale
+		dfWorking = dfWorking.Mutate(newCol)
+	}
+	//eliminiamo la colonna originale (quella di input)
+	finalDf := dfWorking.Drop(targetColumn)
+	newDfInfo := DataframeInfoBuild(dfInfo.Id, &finalDf)
+
+	return newDfInfo
 }
