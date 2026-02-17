@@ -71,6 +71,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(sas)
+
+	mcc, err2 := learning.PerformManualLOOCV(sas, targetColumn)
+	if err2 != nil {
+		log.Fatal(err2)
+	}
+	fmt.Println(mcc)
 
 }

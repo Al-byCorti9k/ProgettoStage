@@ -2,11 +2,14 @@ package machinelearning
 
 import (
 	"bytes"
-	//"fmt"
+	"fmt"
+	"math"
+
 	"github.com/go-gota/gota/dataframe"
 	"github.com/sjwhitworth/golearn/base"
+
 	//"github.com/sjwhitworth/golearn/evaluation"
-	//"github.com/sjwhitworth/golearn/linear_models"
+	"github.com/sjwhitworth/golearn/linear_models"
 )
 
 // ConvertGotaToGolearn trasforma un DataFrame gota in Instances di GoLearn
@@ -30,16 +33,17 @@ func ConvertGotaToGolearn(df dataframe.DataFrame) (base.FixedDataGrid, error) {
 	return instances, nil
 }
 
-/*
-// Esegue la validazione Leave-One-Out utilizzando la Regressione Logistica
-func performLOOCV(instances base.FixedDataGrid, targetColumnName string) (float64, error) {
-	// 1. Identifica e imposta la colonna target tramite nome
+func PerformManualLOOCV(instances base.FixedDataGrid, targetColumn string) (float64, error) {
+
+	var prediction []base.FixedDataGrid
+
+	// 1. Identificazione dell'attributo target
 	attributes := instances.AllAttributes()
 	var targetAttr base.Attribute
 	found := false
 
 	for _, attr := range attributes {
-		if attr.GetName() == targetColumnName {
+		if attr.GetName() == targetColumn {
 			targetAttr = attr
 			found = true
 			break
@@ -47,44 +51,102 @@ func performLOOCV(instances base.FixedDataGrid, targetColumnName string) (float6
 	}
 
 	if !found {
-		return 0, fmt.Errorf("colonna target '%s' non trovata nel dataset", targetColumnName)
+		return 0, fmt.Errorf("colonna target '%s' non trovata nel dataset", targetColumn)
 	}
 
-	// Comunica a GoLearn qual è la colonna di classe (target)
+	// 2. Reset e impostazione del Target Attribute
+	for _, classAttr := range instances.AllClassAttributes() {
+		instances.RemoveClassAttribute(classAttr)
+	}
 	instances.AddClassAttribute(targetAttr)
 
-	// 2. Generazione dei Fold (LOOCV = numero di fold pari al numero di righe)
+	// 3. Preparazione per il loop LOOCV
 	numInstances, _ := instances.Size()
-	folds, err := evaluation.GenerateCrossValidatedFolds(instances, numInstances)
-	if err != nil {
-		return 0, err
-	}
 
-	var totalAccuracy float64
+	//Inizia il k-folding vero e proprio
+	for i := 0; i < numInstances; i++ {
+		// Create the test set with the i-th instance
+		testRows := []int{i}
+		testView := base.NewInstancesViewFromVisible(instances, testRows, instances.AllAttributes())
+		testData := base.NewDenseCopy(testView)
 
-	for _, fold := range folds {
-		// 3. Inizializzazione e Training
-		// Parametri: regolarizzazione "l2", coefficiente 1.0, tolleranza 1e-6
+		// Create the training set with all instances except the i-th
+		trainRows := make([]int, 0, numInstances-1)
+		for j := 0; j < numInstances; j++ {
+			if j != i {
+				trainRows = append(trainRows, j)
+			}
+		}
+		trainView := base.NewInstancesViewFromVisible(instances, trainRows, instances.AllAttributes())
+		trainData := base.NewDenseCopy(trainView)
+
+		// Inizializzazione del modello (Logistic Regression)
 		lr, err := linear_models.NewLogisticRegression("l2", 1.0, 1e-6)
 		if err != nil {
 			return 0, err
 		}
 
-		err = lr.Fit(fold.TrainingData)
+		// Addestramento
+		err = lr.Fit(trainData)
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("errore nel training al fold %d: %v", i, err)
 		}
 
-		// 4. Predizione e Valutazione
-		predictions, err := lr.Predict(fold.TestData)
+		// Predizione
+		predictions, err := lr.Predict(testData)
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("errore nella prediction al fold %d: %v", i, err)
 		}
-
-		confusionMat, _ := evaluation.GetConfusionMatrix(fold.TestData, predictions)
-		totalAccuracy += evaluation.GetAccuracy(confusionMat)
+		prediction = append(prediction, predictions)
 	}
 
-	// Ritorna la media dell'accuratezza
-	return (totalAccuracy / float64(numInstances)) * 100, nil
-}*/
+	mcc, err := calculateMCC(prediction, instances)
+	if err != nil {
+		return 0, err
+	}
+	return mcc, nil
+}
+
+func calculateMCC(predictions []base.FixedDataGrid, originalData base.FixedDataGrid) (float64, error) {
+	// 1. Inizializziamo i contatori per la matrice di confusione (Assumendo classificazione binaria)
+	// Se hai più classi, dovresti usare evaluation.GetConfusionMatrix
+	var tp, tn, fp, fn float64
+
+	numInstances, _ := originalData.Size()
+
+	for i := 0; i < numInstances; i++ {
+		// Estraiamo il valore reale (Ground Truth)
+		realClassVal := base.GetClass(originalData, i)
+
+		// Estraiamo la predizione (il test set in LOOCV ha sempre dimensione 1, quindi riga 0)
+		predictedClassVal := base.GetClass(predictions[i], 0)
+
+		// Nota: base.GetClass restituisce una stringa (il valore della categoria)
+		// Assumiamo che "1" o "positive" sia la classe positiva
+		// Modifica i letterali in base alle tue etichette reali
+		if predictedClassVal == "1" {
+			if realClassVal == "1" {
+				tp++
+			} else {
+				fp++
+			}
+		} else {
+			if realClassVal == "1" {
+				fn++
+			} else {
+				tn++
+			}
+		}
+	}
+
+	// 2. Calcolo del coefficiente MCC
+	// Formula: (TP*TN - FP*FN) / sqrt((TP+FP)(TP+FN)(TN+FP)(TN+FN))
+	numerator := (tp * tn) - (fp * fn)
+	denominator := math.Sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+
+	if denominator == 0 {
+		return 0, nil
+	}
+
+	return numerator / denominator, nil
+}
