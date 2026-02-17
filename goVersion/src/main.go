@@ -67,21 +67,20 @@ func main() {
 		log.Fatal(err)
 	}
 
-	a, err := learning.CSVToFloatMatrix("output.csv")
+	X, Y, err := learning.CSVToXY("output.csv", targetColumn)
 
-	fmt.Println(a)
+	fmt.Println(Y)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	X, Y, e := learning.RemoveColumn(a, 2)
+	pesi := learning.LogisticRegression(X, Y)
 
-	if e != nil {
-		log.Fatal(e)
-	}
+	fmt.Println(pesi)
 
-	b := learning.LogisticRegression(X, Y)
+	//yint := dataprocess.FloatSliceToIntSlice(Y)
+	_, mcc := learning.LeaveOneOutCV(X, Y)
 
-	fmt.Println(b)
+	fmt.Println(mcc)
 }

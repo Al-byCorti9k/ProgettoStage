@@ -11,47 +11,66 @@ import (
 	"gonum.org/v1/gonum/optimize"
 )
 
-func CSVToFloatMatrix(filename string) ([][]float64, error) {
+func CSVToXY(filename string, targetColumn string) ([][]float64, []float64, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer file.Close()
-
 	reader := csv.NewReader(file)
-
 	records, err := reader.ReadAll()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	// Ignora la prima riga (header)
-	if len(records) > 0 {
-		records = records[1:]
+	if len(records) < 2 {
+		return nil, nil, fmt.Errorf("il CSV non contiene dati")
 	}
-
-	matrix := make([][]float64, len(records))
-
-	for i, row := range records {
-		matrix[i] = make([]float64, len(row))
-
-		for j, value := range row {
-			floatVal, err := strconv.ParseFloat(value, 64)
-			if err != nil {
-				return nil, fmt.Errorf("errore conversione riga %d colonna %d: %v", i, j, err)
-			}
-			matrix[i][j] = floatVal
+	// Header
+	header := records[0]
+	// Trova indice colonna target
+	targetIndex := -1
+	for i, colName := range header {
+		if colName == targetColumn {
+			targetIndex = i
+			break
 		}
 	}
-
-	return matrix, nil
+	if targetIndex == -1 {
+		return nil, nil, fmt.Errorf("colonna '%s' non trovata", targetColumn)
+	}
+	// Righe dati (salta header)
+	data := records[1:]
+	X := make([][]float64, len(data))
+	Y := make([]float64, len(data))
+	for i, row := range data {
+		if len(row) != len(header) {
+			return nil, nil, fmt.Errorf("numero colonne inconsistente alla riga %d", i+1)
+		}
+		Yval, err := strconv.ParseFloat(row[targetIndex], 64)
+		if err != nil {
+			return nil, nil, fmt.Errorf("errore conversione target riga %d: %v", i+1, err)
+		}
+		Y[i] = Yval
+		// Costruisci riga X senza la colonna target
+		newRow := make([]float64, 0, len(row)-1)
+		for j, value := range row {
+			if j == targetIndex {
+				continue
+			}
+			floatVal, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return nil, nil, fmt.Errorf("errore conversione riga %d colonna %d: %v", i+1, j, err)
+			}
+			newRow = append(newRow, floatVal)
+		}
+		X[i] = newRow
+	}
+	return X, Y, nil
 }
 
 // Logistic calcola la funzione sigmoide: 1 / (1 + e^-z)
-
 func sigmoid(z float64) float64 {
-
 	return 1.0 / (1.0 + math.Exp(-z))
-
 }
 
 // LogisticRegression addestra il modello e restituisce i pesi (weights)
@@ -86,47 +105,123 @@ func LogisticRegression(x [][]float64, y []float64) []float64 {
 			fd.Gradient(grad, costFunc, w, nil)
 		},
 	}
+	settings := optimize.Settings{
+		MajorIterations: 1000, // più iterazioni per convergenza
+	}
 	// Usiamo l'algoritmo BFGS (molto più veloce del Gradient Descent semplice)
-	result, err := optimize.Minimize(p, make([]float64, nFeatures), nil, &optimize.BFGS{})
+	result, err := optimize.Minimize(p, make([]float64, nFeatures), &settings, &optimize.BFGS{})
 	if err != nil {
-		fmt.Println("Errore nell'ottimizzazione:", err)
+		//fmt.Println("Errore nell'ottimizzazione:", err)
 	}
 	return result.X
 }
 
-// dato l'indice, estrae la colonna.
-func RemoveColumn(matrix [][]float64, col int) ([][]float64, []float64, error) {
-	if len(matrix) == 0 {
-		return nil, nil, fmt.Errorf("matrice vuota")
+// Predict restituisce la probabilità che y = 1 per ogni esempio
+func Predict(x [][]float64, weights []float64) []float64 {
+	nSamples := len(x)
+	probs := make([]float64, nSamples)
+	for i := 0; i < nSamples; i++ {
+		var dot float64
+		for j := 0; j < len(weights); j++ {
+			dot += x[i][j] * weights[j]
+		}
+		probs[i] = sigmoid(dot)
+	}
+	return probs
+}
+
+// PredictClass restituisce 0 o 1 usando una soglia
+func PredictClass(x [][]float64, weights []float64) []int {
+	probs := Predict(x, weights)
+	classes := make([]int, len(probs))
+	for i, p := range probs {
+		if p >= 0.5 {
+			classes[i] = 1
+		} else {
+			classes[i] = 0
+		}
+	}
+	return classes
+}
+
+// MCC calcola il Matthews Correlation Coefficient
+// yTrue: valori veri (0 o 1)
+// yPred: valori predetti (0 o 1)
+func MCC(yTrue []int, yPred []int) float64 {
+	if len(yTrue) != len(yPred) {
+		panic("Lunghezza di yTrue e yPred deve essere uguale")
 	}
 
-	if col < 0 || col >= len(matrix[0]) {
-		return nil, nil, fmt.Errorf("indice colonna fuori range")
+	var tp, tn, fp, fn float64
+
+	for i := 0; i < len(yTrue); i++ {
+		switch {
+		case yTrue[i] == 1 && yPred[i] == 1:
+			tp++
+		case yTrue[i] == 0 && yPred[i] == 0:
+			tn++
+		case yTrue[i] == 0 && yPred[i] == 1:
+			fp++
+		case yTrue[i] == 1 && yPred[i] == 0:
+			fn++
+		}
 	}
 
-	nRows := len(matrix)
-	nCols := len(matrix[0])
+	num := tp*tn - fp*fn
+	den := math.Sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
 
-	newMatrix := make([][]float64, nRows)
-	removedColumn := make([]float64, nRows)
+	if den == 0 {
+		return 0 // caso speciale, MCC non definito
+	}
 
-	for i := 0; i < nRows; i++ {
+	return num / den
+}
 
-		if len(matrix[i]) != nCols {
-			return nil, nil, fmt.Errorf("matrice non rettangolare alla riga %d", i)
+// LeaveOneOutCV esegue la Leave-One-Out cross-validation
+// X: matrice delle feature
+// y: etichette (0.0 o 1.0)
+// ritorna slice di predizioni 0/1 e MCC
+func LeaveOneOutCV(X [][]float64, y []float64) ([]int, float64) {
+	nSamples := len(X)
+	predictions := make([]int, nSamples)
+
+	for i := 0; i < nSamples; i++ {
+		// Creiamo X_train e y_train escludendo l'i-esimo esempio
+		X_train := make([][]float64, 0, nSamples-1)
+		y_train := make([]float64, 0, nSamples-1)
+		for j := 0; j < nSamples; j++ {
+			if j != i {
+				X_train = append(X_train, X[j])
+				y_train = append(y_train, y[j])
+			}
 		}
 
-		// salva il valore della colonna rimossa
-		removedColumn[i] = matrix[i][col]
+		// Addestriamo il modello sui n-1 esempi
+		weights := LogisticRegression(X_train, y_train)
 
-		// crea nuova riga senza la colonna
-		newRow := make([]float64, 0, nCols-1)
-		//... sintassi espansione delle slices
-		newRow = append(newRow, matrix[i][:col]...)
-		newRow = append(newRow, matrix[i][col+1:]...)
+		// Prediciamo solo per l'esempio lasciato fuori
+		prob := Predict([][]float64{X[i]}, weights)[0]
 
-		newMatrix[i] = newRow
+		// Convertiamo in 0 o 1 usando soglia 0.5
+		if prob >= 0.5 {
+			predictions[i] = 1
+		} else {
+			predictions[i] = 0
+		}
 	}
 
-	return newMatrix, removedColumn, nil
+	// Convertiamo y in []int
+	yInt := make([]int, nSamples)
+	for i, v := range y {
+		if v >= 0.5 {
+			yInt[i] = 1
+		} else {
+			yInt[i] = 0
+		}
+	}
+
+	// Calcoliamo MCC
+	mcc := MCC(yInt, predictions)
+
+	return predictions, mcc
 }

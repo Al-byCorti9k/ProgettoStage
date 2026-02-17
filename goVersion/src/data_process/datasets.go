@@ -133,3 +133,11 @@ func (di *DataframeInfo) setDataframe(newDf *dataframe.DataFrame) {
 func (di *DataframeInfo) setDataframeID(newID int) {
 	di.Id = newID
 }
+
+func FloatSliceToIntSlice(y []float64) []int {
+	res := make([]int, len(y))
+	for i, v := range y {
+		res[i] = int(v) // converte 0.0 → 0 e 1.0 → 1
+	}
+	return res
+}
