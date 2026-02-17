@@ -1,152 +1,132 @@
 package machinelearning
 
 import (
-	"bytes"
+	"encoding/csv"
 	"fmt"
 	"math"
+	"os"
+	"strconv"
 
-	"github.com/go-gota/gota/dataframe"
-	"github.com/sjwhitworth/golearn/base"
-
-	//"github.com/sjwhitworth/golearn/evaluation"
-	"github.com/sjwhitworth/golearn/linear_models"
+	"gonum.org/v1/gonum/diff/fd"
+	"gonum.org/v1/gonum/optimize"
 )
 
-// ConvertGotaToGolearn trasforma un DataFrame gota in Instances di GoLearn
-func ConvertGotaToGolearn(df dataframe.DataFrame) (base.FixedDataGrid, error) {
-	// 1. Creiamo un buffer in memoria per scrivere il CSV
-	buf := new(bytes.Buffer)
-
-	// 2. Scriviamo il dataframe nel buffer in formato CSV
-	err := df.WriteCSV(buf)
+func CSVToFloatMatrix(filename string) ([][]float64, error) {
+	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 
-	reader := bytes.NewReader(buf.Bytes())
-	// oltre a quella standard già presente nel CSV
-	instances, err := base.ParseCSVToInstancesFromReader(reader, true)
+	reader := csv.NewReader(file)
+
+	records, err := reader.ReadAll()
 	if err != nil {
 		return nil, err
 	}
+	// Ignora la prima riga (header)
+	if len(records) > 0 {
+		records = records[1:]
+	}
 
-	return instances, nil
+	matrix := make([][]float64, len(records))
+
+	for i, row := range records {
+		matrix[i] = make([]float64, len(row))
+
+		for j, value := range row {
+			floatVal, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return nil, fmt.Errorf("errore conversione riga %d colonna %d: %v", i, j, err)
+			}
+			matrix[i][j] = floatVal
+		}
+	}
+
+	return matrix, nil
 }
 
-func PerformManualLOOCV(instances base.FixedDataGrid, targetColumn string) (float64, error) {
+// Logistic calcola la funzione sigmoide: 1 / (1 + e^-z)
 
-	var prediction []base.FixedDataGrid
+func sigmoid(z float64) float64 {
 
-	// 1. Identificazione dell'attributo target
-	attributes := instances.AllAttributes()
-	var targetAttr base.Attribute
-	found := false
+	return 1.0 / (1.0 + math.Exp(-z))
 
-	for _, attr := range attributes {
-		if attr.GetName() == targetColumn {
-			targetAttr = attr
-			found = true
-			break
-		}
-	}
+}
 
-	if !found {
-		return 0, fmt.Errorf("colonna target '%s' non trovata nel dataset", targetColumn)
-	}
+// LogisticRegression addestra il modello e restituisce i pesi (weights)
+// x: matrice delle feature (input), y: etichette (0 o 1)
+func LogisticRegression(x [][]float64, y []float64) []float64 {
+	nFeatures := len(x[0])
+	// Definiamo la funzione di costo (Negative Log-Likelihood)
+	costFunc := func(w []float64) float64 {
+		var loss float64
+		for i := 0; i < len(x); i++ {
+			// Calcolo del prodotto scalare (dot product) x_i * w
+			var dot float64
+			for j := 0; j < nFeatures; j++ {
 
-	// 2. Reset e impostazione del Target Attribute
-	for _, classAttr := range instances.AllClassAttributes() {
-		instances.RemoveClassAttribute(classAttr)
-	}
-	instances.AddClassAttribute(targetAttr)
+				dot += x[i][j] * w[j]
 
-	// 3. Preparazione per il loop LOOCV
-	numInstances, _ := instances.Size()
-
-	//Inizia il k-folding vero e proprio
-	for i := 0; i < numInstances; i++ {
-		// Create the test set with the i-th instance
-		testRows := []int{i}
-		testView := base.NewInstancesViewFromVisible(instances, testRows, instances.AllAttributes())
-		testData := base.NewDenseCopy(testView)
-
-		// Create the training set with all instances except the i-th
-		trainRows := make([]int, 0, numInstances-1)
-		for j := 0; j < numInstances; j++ {
-			if j != i {
-				trainRows = append(trainRows, j)
 			}
-		}
-		trainView := base.NewInstancesViewFromVisible(instances, trainRows, instances.AllAttributes())
-		trainData := base.NewDenseCopy(trainView)
+			h := sigmoid(dot)
+			// Cross-Entropy Loss
+			// Evitiamo log(0) aggiungendo un piccolo epsilon
+			eps := 1e-15
+			loss -= y[i]*math.Log(h+eps) + (1-y[i])*math.Log(1-h+eps)
 
-		// Inizializzazione del modello (Logistic Regression)
-		lr, err := linear_models.NewLogisticRegression("l2", 1.0, 1e-6)
-		if err != nil {
-			return 0, err
 		}
-
-		// Addestramento
-		err = lr.Fit(trainData)
-		if err != nil {
-			return 0, fmt.Errorf("errore nel training al fold %d: %v", i, err)
-		}
-
-		// Predizione
-		predictions, err := lr.Predict(testData)
-		if err != nil {
-			return 0, fmt.Errorf("errore nella prediction al fold %d: %v", i, err)
-		}
-		prediction = append(prediction, predictions)
+		return loss / float64(len(x))
 	}
 
-	mcc, err := calculateMCC(prediction, instances)
+	// Punto di partenza (pesi inizializzati a zero)
+	p := optimize.Problem{
+		Func: costFunc,
+		Grad: func(grad, w []float64) {
+			fd.Gradient(grad, costFunc, w, nil)
+		},
+	}
+	// Usiamo l'algoritmo BFGS (molto più veloce del Gradient Descent semplice)
+	result, err := optimize.Minimize(p, make([]float64, nFeatures), nil, &optimize.BFGS{})
 	if err != nil {
-		return 0, err
+		fmt.Println("Errore nell'ottimizzazione:", err)
 	}
-	return mcc, nil
+	return result.X
 }
 
-func calculateMCC(predictions []base.FixedDataGrid, originalData base.FixedDataGrid) (float64, error) {
-	// 1. Inizializziamo i contatori per la matrice di confusione (Assumendo classificazione binaria)
-	// Se hai più classi, dovresti usare evaluation.GetConfusionMatrix
-	var tp, tn, fp, fn float64
+// dato l'indice, estrae la colonna.
+func RemoveColumn(matrix [][]float64, col int) ([][]float64, []float64, error) {
+	if len(matrix) == 0 {
+		return nil, nil, fmt.Errorf("matrice vuota")
+	}
 
-	numInstances, _ := originalData.Size()
+	if col < 0 || col >= len(matrix[0]) {
+		return nil, nil, fmt.Errorf("indice colonna fuori range")
+	}
 
-	for i := 0; i < numInstances; i++ {
-		// Estraiamo il valore reale (Ground Truth)
-		realClassVal := base.GetClass(originalData, i)
+	nRows := len(matrix)
+	nCols := len(matrix[0])
 
-		// Estraiamo la predizione (il test set in LOOCV ha sempre dimensione 1, quindi riga 0)
-		predictedClassVal := base.GetClass(predictions[i], 0)
+	newMatrix := make([][]float64, nRows)
+	removedColumn := make([]float64, nRows)
 
-		// Nota: base.GetClass restituisce una stringa (il valore della categoria)
-		// Assumiamo che "1" o "positive" sia la classe positiva
-		// Modifica i letterali in base alle tue etichette reali
-		if predictedClassVal == "1" {
-			if realClassVal == "1" {
-				tp++
-			} else {
-				fp++
-			}
-		} else {
-			if realClassVal == "1" {
-				fn++
-			} else {
-				tn++
-			}
+	for i := 0; i < nRows; i++ {
+
+		if len(matrix[i]) != nCols {
+			return nil, nil, fmt.Errorf("matrice non rettangolare alla riga %d", i)
 		}
+
+		// salva il valore della colonna rimossa
+		removedColumn[i] = matrix[i][col]
+
+		// crea nuova riga senza la colonna
+		newRow := make([]float64, 0, nCols-1)
+		//... sintassi espansione delle slices
+		newRow = append(newRow, matrix[i][:col]...)
+		newRow = append(newRow, matrix[i][col+1:]...)
+
+		newMatrix[i] = newRow
 	}
 
-	// 2. Calcolo del coefficiente MCC
-	// Formula: (TP*TN - FP*FN) / sqrt((TP+FP)(TP+FN)(TN+FP)(TN+FN))
-	numerator := (tp * tn) - (fp * fn)
-	denominator := math.Sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
-
-	if denominator == 0 {
-		return 0, nil
-	}
-
-	return numerator / denominator, nil
+	return newMatrix, removedColumn, nil
 }

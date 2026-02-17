@@ -67,15 +67,21 @@ func main() {
 		log.Fatal(err)
 	}
 
-	sas, err := learning.ConvertGotaToGolearn(dfSES.Df)
+	a, err := learning.CSVToFloatMatrix("output.csv")
+
+	fmt.Println(a)
+
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	mcc, err2 := learning.PerformManualLOOCV(sas, targetColumn)
-	if err2 != nil {
-		log.Fatal(err2)
-	}
-	fmt.Println(mcc)
+	X, Y, e := learning.RemoveColumn(a, 2)
 
+	if e != nil {
+		log.Fatal(e)
+	}
+
+	b := learning.LogisticRegression(X, Y)
+
+	fmt.Println(b)
 }
