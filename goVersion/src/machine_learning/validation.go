@@ -177,6 +177,7 @@ func MCC(yTrue []int, yPred []int) float64 {
 	return num / den
 }
 
+// usare il pacchetto gonum.org/v1/gonum/mat per gestire le matrici.
 // LeaveOneOutCV esegue la Leave-One-Out cross-validation
 // X: matrice delle feature
 // y: etichette (0.0 o 1.0)
