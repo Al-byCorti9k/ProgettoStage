@@ -3,11 +3,12 @@ package machinelearning
 import (
 	"encoding/csv"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"strconv"
 
-	"gonum.org/v1/gonum/diff/fd"
+	//"gonum.org/v1/gonum/diff/fd"
 	"gonum.org/v1/gonum/optimize"
 )
 
@@ -70,49 +71,78 @@ func CSVToXY(filename string, targetColumn string) ([][]float64, []float64, erro
 
 // Logistic calcola la funzione sigmoide: 1 / (1 + e^-z)
 func sigmoid(z float64) float64 {
-	return 1.0 / (1.0 + math.Exp(-z))
+
+	if z >= 0 {
+		return 1.0 / (1.0 + math.Exp(-z))
+	} else {
+		return math.Exp(z) / (1.0 + math.Exp(-z))
+	}
 }
 
 // LogisticRegression addestra il modello e restituisce i pesi (weights)
 // x: matrice delle feature (input), y: etichette (0 o 1)
 func LogisticRegression(x [][]float64, y []float64) []float64 {
 	nFeatures := len(x[0])
+	nSamples := float64(len(x))
+
 	// Definiamo la funzione di costo (Negative Log-Likelihood)
 	costFunc := func(w []float64) float64 {
 		var loss float64
 		for i := 0; i < len(x); i++ {
-			// Calcolo del prodotto scalare (dot product) x_i * w
 			var dot float64
 			for j := 0; j < nFeatures; j++ {
-
 				dot += x[i][j] * w[j]
-
 			}
 			h := sigmoid(dot)
-			// Cross-Entropy Loss
-			// Evitiamo log(0) aggiungendo un piccolo epsilon
 			eps := 1e-15
 			loss -= y[i]*math.Log(h+eps) + (1-y[i])*math.Log(1-h+eps)
-
 		}
-		return loss / float64(len(x))
+		return loss / nSamples
 	}
 
-	// Punto di partenza (pesi inizializzati a zero)
+	// Gradiente Analitico
+	gradFunc := func(grad, w []float64) {
+		// Azzera il gradiente per ogni chiamata
+		for j := range grad {
+			grad[j] = 0
+		}
+
+		for i := 0; i < len(x); i++ {
+			var dot float64
+			for j := 0; j < nFeatures; j++ {
+				dot += x[i][j] * w[j]
+			}
+
+			// Errore: (predizione - valore reale)
+			prediction := sigmoid(dot)
+			diff := prediction - y[i]
+
+			// Aggiorna il gradiente per ogni feature
+			for j := 0; j < nFeatures; j++ {
+				grad[j] += diff * x[i][j]
+			}
+		}
+
+		// Normalizza per il numero di campioni
+		for j := range grad {
+			grad[j] /= nSamples
+		}
+	}
+
 	p := optimize.Problem{
 		Func: costFunc,
-		Grad: func(grad, w []float64) {
-			fd.Gradient(grad, costFunc, w, nil)
-		},
+		Grad: gradFunc,
 	}
+
 	settings := optimize.Settings{
-		MajorIterations: 1000, // più iterazioni per convergenza
+		MajorIterations: 1000,
 	}
-	// Usiamo l'algoritmo BFGS (molto più veloce del Gradient Descent semplice)
+
 	result, err := optimize.Minimize(p, make([]float64, nFeatures), &settings, &optimize.BFGS{})
 	if err != nil {
-		//fmt.Println("Errore nell'ottimizzazione:", err)
+		log.Fatal(err)
 	}
+
 	return result.X
 }
 
