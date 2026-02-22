@@ -241,13 +241,27 @@ func (self *DataframeInfo) StandardScalar() DataframeInfo {
 				continue
 			}
 
-			normalizedCol := colToCheck.Map(func(element series.Element) series.Element {
-				val := element.Float()
-				z := (val - mean) / std
-				element.Set(z)
-				return element
-			})
+			// 1. Estraiamo i valori della colonna convertendoli tutti in float64
+			vals := colToCheck.Float()
 
+			// Creiamo una nuova serie di tipo Float con la stessa lunghezza
+			// e applichiamo la formula dello Z-score
+			for i := 0; i < len(vals); i++ {
+				vals[i] = (vals[i] - mean) / std
+			}
+
+			// Creiamo la nuova serie Gota forzando il tipo Float
+			normalizedCol := series.Floats(vals)
+			normalizedCol.Name = col // Mantieni il nome originale della colonna
+
+			/*
+				normalizedCol := colToCheck.Map(func(element series.Element) series.Element {
+					val := element.Float()
+					z := (val - mean) / std
+					element.Set(z)
+					return element
+				})
+			*/
 			// Sostituiamo la colonna nel dataframe
 			dfWorking = dfWorking.Mutate(normalizedCol)
 		}

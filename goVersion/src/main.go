@@ -75,10 +75,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	pesi := learning.LogisticRegression(X, Y)
-
-	fmt.Println(pesi)
-
 	//yint := dataprocess.FloatSliceToIntSlice(Y)
 	_, mcc := learning.LeaveOneOutCV(X, Y)
 

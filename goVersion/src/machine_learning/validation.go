@@ -3,7 +3,8 @@ package machinelearning
 import (
 	"encoding/csv"
 	"fmt"
-	"log"
+
+	//"log"
 	"math"
 	"os"
 	"strconv"
@@ -69,7 +70,6 @@ func CSVToXY(filename string, targetColumn string) ([][]float64, []float64, erro
 	return X, Y, nil
 }
 
-// Logistic calcola la funzione sigmoide: 1 / (1 + e^-z)
 func sigmoid(z float64) float64 {
 
 	if z >= 0 {
@@ -79,91 +79,151 @@ func sigmoid(z float64) float64 {
 	}
 }
 
-// LogisticRegression addestra il modello e restituisce i pesi (weights)
-// x: matrice delle feature (input), y: etichette (0 o 1)
-func LogisticRegression(x [][]float64, y []float64) []float64 {
+type LogisticParams struct {
+	Penalty      string  // "l2"
+	C            float64 // inverse of regularization strength
+	FitIntercept bool
+	Tol          float64
+	MaxIter      int
+	ClassWeight  map[float64]float64 // optional
+}
+
+func LogisticRegressionSK(
+	x [][]float64,
+	y []float64,
+	params LogisticParams,
+) []float64 {
+	nSamples := len(x)
 	nFeatures := len(x[0])
-	nSamples := float64(len(x))
 
-	// Definiamo la funzione di costo (Negative Log-Likelihood)
-	costFunc := func(w []float64) float64 {
-		var loss float64
-		for i := 0; i < len(x); i++ {
-			var dot float64
-			for j := 0; j < nFeatures; j++ {
-				dot += x[i][j] * w[j]
-			}
-			h := sigmoid(dot)
-			eps := 1e-15
-			loss -= y[i]*math.Log(h+eps) + (1-y[i])*math.Log(1-h+eps)
-		}
-		return loss / nSamples
+	if params.C == 0 {
+		params.C = 1.0
 	}
 
-	// Gradiente Analitico
-	gradFunc := func(grad, w []float64) {
-		// Azzera il gradiente per ogni chiamata
-		for j := range grad {
-			grad[j] = 0
-		}
+	// sklearn: lambda = 1 / (C * nSamples)
+	lambda := 1.0 / (params.C * float64(nSamples))
 
-		for i := 0; i < len(x); i++ {
-			var dot float64
-			for j := 0; j < nFeatures; j++ {
-				dot += x[i][j] * w[j]
-			}
-
-			// Errore: (predizione - valore reale)
-			prediction := sigmoid(dot)
-			diff := prediction - y[i]
-
-			// Aggiorna il gradiente per ogni feature
-			for j := 0; j < nFeatures; j++ {
-				grad[j] += diff * x[i][j]
-			}
-		}
-
-		// Normalizza per il numero di campioni
-		for j := range grad {
-			grad[j] /= nSamples
-		}
+	dim := nFeatures
+	if params.FitIntercept {
+		dim++
 	}
 
-	p := optimize.Problem{
-		Func: costFunc,
-		Grad: gradFunc,
+	problem := optimize.Problem{
+		Func: func(w []float64) float64 {
+			var loss float64
+			for i := 0; i < nSamples; i++ {
+				var dot float64
+				for j := 0; j < nFeatures; j++ {
+					dot += x[i][j] * w[j]
+				}
+				if params.FitIntercept {
+					dot += w[nFeatures]
+				}
+				h := sigmoid(dot)
+
+				weight := 1.0
+				if params.ClassWeight != nil {
+					weight = params.ClassWeight[y[i]]
+				}
+
+				loss -= weight * (y[i]*math.Log(h+1e-15) +
+					(1-y[i])*math.Log(1-h+1e-15))
+			}
+			loss /= float64(nSamples)
+
+			if params.Penalty == "l2" {
+				for j := 0; j < nFeatures; j++ {
+					loss += 0.5 * lambda * w[j] * w[j]
+				}
+			}
+			return loss
+		},
+
+		Grad: func(grad, w []float64) {
+			for j := range grad {
+				grad[j] = 0
+			}
+			for i := 0; i < nSamples; i++ {
+				var dot float64
+				for j := 0; j < nFeatures; j++ {
+					dot += x[i][j] * w[j]
+				}
+				if params.FitIntercept {
+					dot += w[nFeatures]
+				}
+				h := sigmoid(dot)
+				diff := h - y[i]
+
+				weight := 1.0
+				if params.ClassWeight != nil {
+					weight = params.ClassWeight[y[i]]
+				}
+
+				for j := 0; j < nFeatures; j++ {
+					grad[j] += weight * diff * x[i][j]
+				}
+				if params.FitIntercept {
+					grad[nFeatures] += weight * diff
+				}
+			}
+			for j := 0; j < len(grad); j++ {
+				grad[j] /= float64(nSamples)
+			}
+
+			if params.Penalty == "l2" {
+				for j := 0; j < nFeatures; j++ {
+					grad[j] += lambda * w[j]
+				}
+			}
+		},
 	}
 
+	// Imposta MaxIter = 50 per essere identici a scikit-learn
 	settings := optimize.Settings{
-		MajorIterations: 1000,
+		MajorIterations:   50, // ← modifica qui
+		GradientThreshold: params.Tol,
 	}
 
-	result, err := optimize.Minimize(p, make([]float64, nFeatures), &settings, &optimize.BFGS{})
+	result, err := optimize.Minimize(
+		problem,
+		make([]float64, dim),
+		&settings,
+		&optimize.LBFGS{},
+	)
 	if err != nil {
-		log.Fatal(err)
+		// gestisci errore se necessario
 	}
 
 	return result.X
 }
 
-// Predict restituisce la probabilità che y = 1 per ogni esempio
-func Predict(x [][]float64, weights []float64) []float64 {
+func Predict(x [][]float64, weights []float64, fitIntercept bool) []float64 {
 	nSamples := len(x)
+	nFeatures := len(x[0])
 	probs := make([]float64, nSamples)
+
 	for i := 0; i < nSamples; i++ {
 		var dot float64
-		for j := 0; j < len(weights); j++ {
+
+		for j := 0; j < nFeatures; j++ {
 			dot += x[i][j] * weights[j]
 		}
+
+		if fitIntercept {
+			dot += weights[nFeatures] // solo l’ultimo è intercept
+		}
+
 		probs[i] = sigmoid(dot)
 	}
+
 	return probs
 }
 
-// PredictClass restituisce 0 o 1 usando una soglia
-func PredictClass(x [][]float64, weights []float64) []int {
-	probs := Predict(x, weights)
+func PredictClass(x [][]float64, weights []float64, fitIntercept bool) []int {
+
+	probs := Predict(x, weights, fitIntercept)
 	classes := make([]int, len(probs))
+
 	for i, p := range probs {
 		if p >= 0.5 {
 			classes[i] = 1
@@ -171,6 +231,7 @@ func PredictClass(x [][]float64, weights []float64) []int {
 			classes[i] = 0
 		}
 	}
+
 	return classes
 }
 
@@ -226,12 +287,18 @@ func LeaveOneOutCV(X [][]float64, y []float64) ([]int, float64) {
 				y_train = append(y_train, y[j])
 			}
 		}
+		params := LogisticParams{
+			Penalty:      "l2",
+			C:            1,
+			FitIntercept: true,
+			Tol:          0.0001,
+			MaxIter:      50}
 
 		// Addestriamo il modello sui n-1 esempi
-		weights := LogisticRegression(X_train, y_train)
+		weights := LogisticRegressionSK(X_train, y_train, params)
 
 		// Prediciamo solo per l'esempio lasciato fuori
-		prob := Predict([][]float64{X[i]}, weights)[0]
+		prob := Predict([][]float64{X[i]}, weights, params.FitIntercept)[0]
 
 		// Convertiamo in 0 o 1 usando soglia 0.5
 		if prob >= 0.5 {
