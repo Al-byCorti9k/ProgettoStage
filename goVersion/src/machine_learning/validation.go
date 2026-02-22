@@ -73,10 +73,12 @@ func CSVToXY(filename string, targetColumn string) ([][]float64, []float64, erro
 func sigmoid(z float64) float64 {
 
 	if z >= 0 {
-		return 1.0 / (1.0 + math.Exp(-z))
-	} else {
-		return math.Exp(z) / (1.0 + math.Exp(-z))
+		ez := math.Exp(-z)
+		return 1 / (1 + ez)
 	}
+	ez := math.Exp(z)
+	return ez / (1 + ez)
+
 }
 
 type LogisticParams struct {
