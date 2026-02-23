@@ -3,10 +3,12 @@ package machinelearning
 import (
 	"encoding/csv"
 	"fmt"
+	"io"
 	"math"
-	"os"
+
 	"strconv"
 
+	"fortio.org/progressbar"
 	"gonum.org/v1/gonum/optimize"
 )
 
@@ -18,19 +20,21 @@ import (
 //
 // La funzione converte tutti i valori in float64; se la conversione fallisce,
 // restituisce un errore.
-func CSVToXY(filename string, targetColumn string) ([][]float64, []float64, error) {
+func CSVToXY(r io.Reader, targetColumn string) ([][]float64, []float64, error) {
 	// Apre il file. È importante gestire l'errore e chiudere il file con defer.
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer file.Close()
-	// Crea un lettore CSV e legge tutto il contenuto in memoria.
-	reader := csv.NewReader(file)
+	//file, err := os.Open(filename)
+	reader := csv.NewReader(r)
 	records, err := reader.ReadAll()
 	if err != nil {
 		return nil, nil, err
 	}
+	//defer file.Close()
+	// Crea un lettore CSV e legge tutto il contenuto in memoria.
+	//reader := csv.NewReader(file)
+	//records, err := reader.ReadAll()
+	//if err != nil {
+	//	return nil, nil, err
+	//}
 	// Controlla che ci sia almeno un'intestazione più una riga di dati.
 	if len(records) < 2 {
 		return nil, nil, fmt.Errorf("il CSV non contiene dati")
@@ -251,15 +255,12 @@ func LogisticRegression(x [][]float64, y []float64, params LogisticParams,
 		GradientThreshold: params.Tol,
 	}
 
-	result, err := optimize.Minimize(
+	result, _ := optimize.Minimize(
 		problem,
 		make([]float64, dim),
 		&settings,
 		&optimize.LBFGS{},
 	)
-	if err != nil {
-		// gestisci errore se necessario
-	}
 
 	return result.X
 }
@@ -312,9 +313,9 @@ func PredictClass(x [][]float64, weights []float64, fitIntercept bool) []int {
 	return classes
 }
 */
-// MCC calcola il Matthews Correlation Coefficient
-// yTrue: valori veri (0 o 1)
-// yPred: valori predetti (0 o 1)
+//MCC calcola il Matthews Correlation Coefficient
+//yTrue: valori veri (0 o 1)
+//yPred: valori predetti (0 o 1)
 func MCC(yTrue []int, yPred []int) float64 {
 	if len(yTrue) != len(yPred) {
 		panic("yTrue e yPred lenghts should be equal")
@@ -354,9 +355,25 @@ func LeaveOneOutCV(X [][]float64, y []float64) float64 {
 	nSamples := len(X)
 	//inizializziamo il vettore dei valori predetti da ciascun fold
 	predictions := make([]int, nSamples)
+
+	//Crea una nuova barra di progresso con le impostazioni predefinite
+	bar := progressbar.NewBar()
+	//Opzionale: personalizza il prefisso per indicare cosa stiamo facendo
+	bar.UpdatePrefix("LOOCV progress: ")
+	//Alla fine della funzione, assicurati di terminare la barra
+	defer bar.End()
+
 	//cicliamo sul numero di fold
 	for i := 0; i < nSamples; i++ {
-		// Creiamo X_train e y_train escludendo l'i-esimo esempio
+
+		//Calcola la percentuale completata (da 0 a 100)
+		percent := 100.0 * float64(i) / float64(nSamples)
+		//Aggiorna la barra di progresso
+		bar.Progress(percent)
+
+		//mostra il numero del fold corrente nel suffisso
+		bar.UpdateSuffix(fmt.Sprintf("fold %d/%d", i+1, nSamples))
+		//Creiamo X_train e y_train escludendo l'i-esimo esempio
 		X_train := make([][]float64, 0, nSamples-1)
 		y_train := make([]float64, 0, nSamples-1)
 		//questo secondo ciclo serve per arricchire i due set sopra
@@ -378,21 +395,22 @@ func LeaveOneOutCV(X [][]float64, y []float64) float64 {
 			MaxIter:      50,
 		}
 
-		// Addestriamo il modello sui n-1 esempi con i parametri
+		//Addestriamo il modello sui n-1 esempi con i parametri
 		weights := LogisticRegression(X_train, y_train, params)
 
-		// Prediciamo solo per l'esempio lasciato fuori
+		//Prediciamo solo per l'esempio lasciato fuori
 		prob := Predict([][]float64{X[i]}, weights, params.FitIntercept)
 
-		// Convertiamo in 0 o 1 usando soglia 0.5
+		//Convertiamo in 0 o 1 usando soglia 0.5
 		if prob >= 0.5 {
 			predictions[i] = 1
 		} else {
 			predictions[i] = 0
 		}
 	}
-
-	// Convertiamo y in []int
+	bar.Progress(100)
+	bar.Redraw()
+	//Convertiamo y in []int
 	yInt := make([]int, nSamples)
 	for i, v := range y {
 		if v >= 0.5 {
@@ -402,7 +420,7 @@ func LeaveOneOutCV(X [][]float64, y []float64) float64 {
 		}
 	}
 
-	// Calcoliamo MCC
+	//Calcoliamo MCC
 	mcc := MCC(yInt, predictions)
 
 	return mcc

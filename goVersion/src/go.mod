@@ -9,6 +9,7 @@ require (
 )
 
 require (
+	fortio.org/progressbar v1.2.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/tools v0.30.0 // indirect
 )

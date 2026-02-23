@@ -1,10 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
-
-	"os"
+	"runtime"
+	"time"
 
 	dataprocess "github.com/Al-byCorti9k/ProgettoStage/goVersion/src/data_process"
 
@@ -23,7 +24,9 @@ func main() {
 		cli.DatasetView()
 		return
 	}
-	fmt.Println(args.CArgs)
+	var results learning.ResultData
+	//ciclo su tutti i dataset inseriti in input dall'utente. i è un'indice di
+	//ciclo generato automaticamente da range, viene usato per riferirsi all'enentuale colonna target indicata in input.
 	for i, dataset := range args.DArgs {
 
 		//ottengo il dataframe
@@ -39,7 +42,7 @@ func main() {
 		//dell'utente sono coerenti
 		if len(args.CArgs) != 0 {
 			cli.InputColumnsCheck(&dfInfo, &args.CArgs[i])
-			targetColumn = args.CArgs[0]
+			targetColumn = args.CArgs[i]
 		} else {
 			_, numberCols := dfInfo.Df.Dims()
 			targetColumn = dfInfo.Df.Names()[numberCols-1]
@@ -47,20 +50,33 @@ func main() {
 		//qui avviene il preprocessing, quindi riempimento dei valori nulli, la scalatura standard e il one-hot-encoding
 		dfInfoProcessed := dataprocess.FillColumnsNanValues(&dfInfo).StandardScalar().OneHotEncoding(targetColumn)
 		//genero un file generico dove viene esportato il dataframe processato
-		f, err := os.Create("output.csv")
-		cli.HandleError(err)
-		// 3. Esportiamo il DataFrame nel file
-		err = dfInfoProcessed.Df.WriteCSV(f)
-		cli.HandleError(err)
-
-		X, Y, err := learning.CSVToXY("output.csv", targetColumn)
-		//chiudo il file
-		f.Close()
+		var buf bytes.Buffer
+		//Esportiamo il DataFrame nel file
+		err := dfInfoProcessed.Df.WriteCSV(&buf)
 		cli.HandleError(err)
 
-		//calcolo il valore di mcc
+		X, Y, err := learning.CSVToXY(&buf, targetColumn)
+		cli.HandleError(err)
+
+		//calcolo il valore di mcc e il tempo di esecuzione
+		inizio := time.Now()
 		mcc := learning.LeaveOneOutCV(X, Y)
-
-		fmt.Println(mcc)
+		fine := time.Since(inizio)
+		//ad ogni ciclo, arricchisco le entry per il risultato.
+		//serviranno poi per produrre il csv finale con i risultati
+		results.AddEntry(
+			dfInfoProcessed.DfName,
+			runtime.GOOS,
+			fine.Seconds(),
+			float64(fine.Milliseconds()),
+			targetColumn,
+			mcc,
+			0.0,
+			learning.SetMethod(runtime.GOOS),
+		)
 	}
+
+	results.PrintRows()
+	// Salva su file
+	results.SaveResultsToPath()
 }
