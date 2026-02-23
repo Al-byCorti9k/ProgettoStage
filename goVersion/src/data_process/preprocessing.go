@@ -1,17 +1,15 @@
 package dataprocess
 
 import (
-	//"github.com/go-gota/gota/dataframe"
 	"fmt"
 
-	"github.com/go-gota/gota/series"
-
-	//"log"
 	"math"
+
+	"github.com/go-gota/gota/series"
 )
 
 // funzione che gestice i valori vuoti di un dataframe
-func FillColumnsNanValues(dfInfo *DataframeInfo) DataframeInfo {
+func FillColumnsNanValues(dfInfo *DataframeInfo) *DataframeInfo {
 
 	df := fillNanWithMode(dfInfo)
 
@@ -21,7 +19,7 @@ func FillColumnsNanValues(dfInfo *DataframeInfo) DataframeInfo {
 
 	finalDfInfo := DataframeInfoBuild(newDfInfo.Id, &df2.Df)
 
-	return finalDfInfo
+	return &finalDfInfo
 }
 
 func fillNanWithMean(dfInfo *DataframeInfo) DataframeInfo {
@@ -150,7 +148,7 @@ func fillMissingValues(s *series.Series, replacement float64) []float64 {
 }
 
 // si occupa di gestire il one-hot encoding su tutte le colonne categoriche del dataframe
-func (self *DataframeInfo) OneHotEncoding(targetColumn string) DataframeInfo {
+func (self *DataframeInfo) OneHotEncoding(targetColumn string) *DataframeInfo {
 	//ottengo l'hashset relativo alle colonne categoriche
 	info, _ := GetDatasetInfo(&self.Id)
 
@@ -164,7 +162,7 @@ func (self *DataframeInfo) OneHotEncoding(targetColumn string) DataframeInfo {
 	}
 	//restituisco il dataframeInfo con il nuovo dataframe dove le colonne hanno
 	//subito il one-hot-encoding
-	return currentResult
+	return &currentResult
 }
 
 // implementazione custom del one-hot-encoding. Lavora solo su una colonna
@@ -217,7 +215,7 @@ func columnToDummies(dfInfo *DataframeInfo, targetColumn string) DataframeInfo {
 }
 
 // implementazione custom della scalatura standard
-func (self *DataframeInfo) StandardScalar() DataframeInfo {
+func (self *DataframeInfo) StandardScalar() *DataframeInfo {
 
 	// Otteniamo i nomi delle colonne
 	colsInfo, _ := GetDatasetInfo(&self.Id)
@@ -241,7 +239,7 @@ func (self *DataframeInfo) StandardScalar() DataframeInfo {
 				continue
 			}
 
-			// 1. Estraiamo i valori della colonna convertendoli tutti in float64
+			// Estraiamo i valori della colonna convertendoli tutti in float64
 			vals := colToCheck.Float()
 
 			// Creiamo una nuova serie di tipo Float con la stessa lunghezza
@@ -254,20 +252,12 @@ func (self *DataframeInfo) StandardScalar() DataframeInfo {
 			normalizedCol := series.Floats(vals)
 			normalizedCol.Name = col // Mantieni il nome originale della colonna
 
-			/*
-				normalizedCol := colToCheck.Map(func(element series.Element) series.Element {
-					val := element.Float()
-					z := (val - mean) / std
-					element.Set(z)
-					return element
-				})
-			*/
 			// Sostituiamo la colonna nel dataframe
 			dfWorking = dfWorking.Mutate(normalizedCol)
 		}
 
 	}
-
-	return DataframeInfoBuild(self.Id, &dfWorking)
+	dfInfo := DataframeInfoBuild(self.Id, &dfWorking)
+	return &dfInfo
 
 }

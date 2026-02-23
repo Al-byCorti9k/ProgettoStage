@@ -16,7 +16,7 @@ func GetDataframeFromID(id int) dataframe.DataFrame {
 	targetPath := getCsvPath()
 	//ottengo il nome del csv dall'ID
 	csvName, err := GetDatasetInfo(&id)
-	fmt.Println(csvName)
+
 	if err != nil {
 		var dsErr *DatasetError
 

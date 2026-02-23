@@ -17,6 +17,7 @@ import (
 type ConfigArgs struct {
 	DArgs []int
 	CArgs []string
+	VArgs bool
 }
 
 // funzione che parsa gli argomenti da linea di comando ed effettua i controlli
@@ -28,6 +29,8 @@ func ParseCliArgument() ConfigArgs {
 
 	//imposto il flag per ricevere il nome delle colonne
 	pflag.StringSliceVarP(&myArgs.CArgs, "target_column", "t", nil, "select target column from its name")
+
+	pflag.BoolVarP(&myArgs.VArgs, "view_datasets", "v", false, "view all available datasets with their IDs")
 
 	pflag.Parse()
 	//effettuo il controllo degli argomenti. Il controllo sulla colonna è
@@ -99,21 +102,15 @@ func (c *ConfigArgs) isValid() error {
 // effettua verifiche sulle colonne di target selezionate
 func InputColumnsCheck(dfInfo *dataprocess.DataframeInfo, columnName *string) {
 	err := dfContainsTargetColumn(dfInfo, columnName)
-	if err != nil {
-		log.Fatal(err)
-	}
+	HandleError(err)
 
-	err2 := targetColumnIsCategorical(dfInfo, columnName)
+	err = targetColumnIsCategorical(dfInfo, columnName)
 
-	if err2 != nil {
-		log.Fatal(err2)
-	}
+	HandleError(err)
 
-	err3 := targetColumnIsBinary(dfInfo, columnName)
+	err = targetColumnIsBinary(dfInfo, columnName)
 
-	if err3 != nil {
-		log.Fatal(err3)
-	}
+	HandleError(err)
 
 }
 
@@ -181,4 +178,36 @@ func targetColumnIsBinary(dfInfo *dataprocess.DataframeInfo, columnName *string)
 	}
 
 	return nil
+}
+
+// per evitare di ripeterlo sempre
+func HandleError(err error) {
+	if err != nil {
+		log.Fatalf("%+v", err)
+	}
+}
+
+// serve all'utente per visualizzare tutti i dataset registrati
+func DatasetView() {
+
+	names := [5]string{
+		"SEPSIS",
+		"NEUROBLASTOMA",
+		"DEPRESSION_HEART",
+		"CARDIAC_ARREST",
+		"DIABETES",
+	}
+	// Calcola la lunghezza massima dei nomi
+	maxLen := 0
+	for _, name := range names {
+		if len(name) > maxLen {
+			maxLen = len(name)
+		}
+	}
+
+	// Stampa con allineamento: il nome occupa esattamente maxLen caratteri (allineato a sinistra)
+	for i, name := range names {
+		fmt.Printf("%-*s: %d\n", maxLen, name, i)
+	}
+
 }

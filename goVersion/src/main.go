@@ -14,69 +14,53 @@ import (
 )
 
 func main() {
-
+	//parso gli input da linea di comando
 	args := cli.ParseCliArgument()
+	//settaggi dei log. Personalizzazione stampa errori
 	log.SetPrefix("go_version: ")
 	log.SetFlags(0)
-	fmt.Print(args)
-	//a, err := dataprocess.GetDatasetInfo(nil)
-
-	num := args.DArgs[0]
-	fmt.Println(num)
-	df := dataprocess.GetDataframeFromID(args.DArgs[0])
-
-	dfInfo := dataprocess.DataframeInfoBuild(args.DArgs[0], &df)
-
-	var targetColumn string
-
-	if len(args.CArgs) != 0 {
-		cli.InputColumnsCheck(&dfInfo, &args.CArgs[0])
-		targetColumn = args.CArgs[0]
-	} else {
-		_, numberCols := dfInfo.Df.Dims()
-		targetColumn = dfInfo.Df.Names()[numberCols-1]
+	if args.VArgs {
+		cli.DatasetView()
+		return
 	}
-	println(targetColumn)
+	fmt.Println(args.CArgs)
+	for i, dataset := range args.DArgs {
 
-	fmt.Println(dfInfo)
+		//ottengo il dataframe
+		df := dataprocess.GetDataframeFromID(dataset)
+		//stampiamo il dataframe selezionato
+		fmt.Println(df)
+		//ottengo le informazioni del dataframe
+		dfInfo := dataprocess.DataframeInfoBuild(dataset, &df)
+		//dichiaro la variabile con il nome della colonna target
+		var targetColumn string
+		//se in input non ho dichiarato il nome, di default viene scelta come target
+		//l'ultima colonna. Altrimenti viene controllato se gli input
+		//dell'utente sono coerenti
+		if len(args.CArgs) != 0 {
+			cli.InputColumnsCheck(&dfInfo, &args.CArgs[i])
+			targetColumn = args.CArgs[0]
+		} else {
+			_, numberCols := dfInfo.Df.Dims()
+			targetColumn = dfInfo.Df.Names()[numberCols-1]
+		}
+		//qui avviene il preprocessing, quindi riempimento dei valori nulli, la scalatura standard e il one-hot-encoding
+		dfInfoProcessed := dataprocess.FillColumnsNanValues(&dfInfo).StandardScalar().OneHotEncoding(targetColumn)
+		//genero un file generico dove viene esportato il dataframe processato
+		f, err := os.Create("output.csv")
+		cli.HandleError(err)
+		// 3. Esportiamo il DataFrame nel file
+		err = dfInfoProcessed.Df.WriteCSV(f)
+		cli.HandleError(err)
 
-	dfInfo2 := dataprocess.FillColumnsNanValues(&dfInfo)
+		X, Y, err := learning.CSVToXY("output.csv", targetColumn)
+		//chiudo il file
+		f.Close()
+		cli.HandleError(err)
 
-	fmt.Println(dfInfo2)
+		//calcolo il valore di mcc
+		mcc := learning.LeaveOneOutCV(X, Y)
 
-	//fmt.Println(a.VecToHashSet())
-	fmt.Println(dfInfo.Df.Names())
-
-	dfSAS := dfInfo2.StandardScalar()
-
-	fmt.Println(dfSAS.Df)
-
-	dfSES := dfSAS.OneHotEncoding(targetColumn)
-
-	fmt.Println(dfSES.Df)
-
-	f, err := os.Create("output.csv")
-	if err != nil {
-		log.Fatal(err)
+		fmt.Println(mcc)
 	}
-	defer f.Close()
-
-	// 3. Esportiamo il DataFrame nel file
-	err = dfSES.Df.WriteCSV(f)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	X, Y, err := learning.CSVToXY("output.csv", targetColumn)
-
-	fmt.Println(Y)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	//yint := dataprocess.FloatSliceToIntSlice(Y)
-	_, mcc := learning.LeaveOneOutCV(X, Y)
-
-	fmt.Println(mcc)
 }
