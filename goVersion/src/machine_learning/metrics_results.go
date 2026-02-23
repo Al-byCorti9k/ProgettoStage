@@ -54,9 +54,9 @@ func (r *ResultData) WriteCSV(w io.Writer) error {
 		record := []string{
 			r.Dataset[i],                   // stringa, già pronta
 			r.Os[i],                        // stringa
+			r.TargetColumn[i],              // stringa
 			fmt.Sprintf("%f", r.TimeS[i]),  // float64 → stringa
 			fmt.Sprintf("%f", r.TimeMs[i]), // float64 → stringa
-			r.TargetColumn[i],              // stringa
 			fmt.Sprintf("%f", r.Mcc[i]),    // float64 → stringa
 			fmt.Sprintf("%f", r.Energy[i]), // float64 → stringa
 			fmt.Sprintf("%s", r.Method[i]), // anche se è stringa, lo convertiamo per sicurezza
@@ -204,7 +204,7 @@ func (results *ResultData) SaveResultsToPath() {
 
 	// Genera il nome file con timestamp
 	timestamp := time.Now().Format("2006-01-02_15h-04m-05s")
-	filename := fmt.Sprintf("result_%s.csv", timestamp)
+	filename := fmt.Sprintf("experiment_go_%s.csv", timestamp)
 
 	// Combina percorso e nome file
 	filePath := filepath.Join(parentDir, filename)

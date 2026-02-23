@@ -75,7 +75,7 @@ func main() {
 			learning.SetMethod(runtime.GOOS),
 		)
 	}
-
+	//stampa i risultati a schermo
 	results.PrintRows()
 	// Salva su file
 	results.SaveResultsToPath()
