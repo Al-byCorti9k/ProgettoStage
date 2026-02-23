@@ -25,10 +25,10 @@ func ParseCliArgument() ConfigArgs {
 
 	var myArgs ConfigArgs
 	//imposto il flag per ricevere i datasets
-	pflag.IntSliceVarP(&myArgs.DArgs, "dataset", "d", nil, "select a dataset from its number")
+	pflag.IntSliceVarP(&myArgs.DArgs, "dataset", "d", nil, "select a dataset from its ID")
 
 	//imposto il flag per ricevere il nome delle colonne
-	pflag.StringSliceVarP(&myArgs.CArgs, "target_column", "t", nil, "select target column from its name")
+	pflag.StringArrayVarP(&myArgs.CArgs, "target_column", "t", nil, "Select the target column by its name. If multiple columns are selected and a column name contains a comma, use the following syntax:\n-t column1 -t column2\n Otherwise, you should use:\n-t column1,column2")
 
 	pflag.BoolVarP(&myArgs.VArgs, "view_datasets", "v", false, "view all available datasets with their IDs")
 
