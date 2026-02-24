@@ -1,3 +1,4 @@
+# Script che serve per calcolare i consumi energetici di un programma rust con l'interfaccia RAPL tramite CodeCarbon
 import pathlib
 import argparse
 import subprocess
@@ -36,7 +37,7 @@ def run_experiment():
     for i in range(iterations):
         print(f"\n--- Inizio Iterazione {i+1}/{iterations} ---")
         
-        cmd_list = [str(p.parent / "rust_version.exe")]
+        cmd_list = [str(p.parent / "rust_version")]
         if d_vector:
             cmd_list.extend(["-d", d_vector[i]])
         if t_vector:
@@ -75,7 +76,7 @@ def run_experiment():
                 df_exp["energy consumption (kWh)"] = ultimo_consumo
                 
                 df_exp.to_csv(target_file, index=False)
-                print(f"Dato ({ultimo_consumo} kWh) inserito in: {target_file.name}")
+                print(f"\nDato ({ultimo_consumo} kWh) inserito in: {target_file.name}")
             
             csv_carbon.unlink()
 
