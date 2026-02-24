@@ -1,5 +1,5 @@
-// modulo che implementa la gestione delle istruzioni da linea di comando
-// e la stampa dei risultati a schermo
+//modulo che implementa la gestione delle istruzioni da linea di comando
+//e la stampa dei risultati a schermo
 
 use clap::{Parser, ArgAction};
 use polars::{frame::DataFrame, prelude::BooleanChunked};
@@ -163,7 +163,7 @@ impl Args {
             })),
         }
     }
-    // verifica che le due categorie siano 0 e 1
+    //verifica che le due categorie siano 0 e 1
     fn target_column_is_binary(
         &mut self,
         df_cat: &DataFrame,

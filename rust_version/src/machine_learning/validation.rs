@@ -32,7 +32,7 @@ pub fn get_metrics<'a>(
 }
 
 //metodo pubblico che riceve in input i samples
-// e il target nel formato ndarray e restituisce
+//e il target nel formato ndarray e restituisce
 //una reference
 fn leave_one_out_cross_validation<'a>(
     samples: ArrayView2<'a, f64>,
@@ -46,10 +46,10 @@ fn leave_one_out_cross_validation<'a>(
     )
     .unwrap()
     .progress_chars("##-");
-    // Trasformiamo le fold in un vettore per poter usare par_iter
+    //Trasformiamo le fold in un vettore per poter usare par_iter
     let folds: Vec<_> = dataset.fold(n).into_iter().collect();
 
-    // Eseguiamo la computazione in parallelo grazie a Rayon
+    //Eseguiamo la computazione in parallelo grazie a Rayon
     let results: Result<Vec<(i32, i32)>, AppError> = folds
         //genera iteratori che lavorano in parallelo
         .into_par_iter()
@@ -63,7 +63,7 @@ fn leave_one_out_cross_validation<'a>(
 
             let pred = model.predict(&valid);
 
-            // Estraiamo il valore reale e quello predetto
+            //Estraiamo il valore reale e quello predetto
             let true_val = valid.targets()[0];
             let pred_val = pred[0];
 
@@ -71,20 +71,19 @@ fn leave_one_out_cross_validation<'a>(
         })
         .collect();
 
-    // Trasformiamo il Vec<(i32, i32)> nelle due Vec richieste
+    //Trasformiamo il Vec<(i32, i32)> nelle due Vec richieste
     let (y_true, y_pred) = results?.into_iter().unzip();
     //Consuma un intero iteratore di coppie, producendo due collezioni: una composta dagli elementi a sinistra delle coppie e una dagli elementi a destra.
     Ok((y_true, y_pred))
 }
 
 //restituisce l'MCC. Ha bisogno di riceve in input i risultati della Leave One out folding.
-
 fn get_mcc<'a>(y_true: ArrayView1<'a, i32>, y_pred: ArrayView1<'a, i32>) -> Result<f32, AppError> {
     let y_true: ndarray::ArrayBase<ndarray::OwnedRepr<usize>, ndarray::Dim<[usize; 1]>> =
         y_true.to_owned().mapv(|x| x as usize);
     let y_pred = y_pred.to_owned().mapv(|x| x as usize);
 
-    // creaiamo la matrice di confusione
+    //creaiamo la matrice di confusione
     let cm = y_pred.confusion_matrix(&y_true)?;
 
     //restituiamo l'mcc
@@ -107,7 +106,7 @@ impl Metrics {
         }
     }
 
-    // --- Metodi Setter (Pattern Fluente) ---
+    //metodi setter
 
     fn set_time(&mut self, time: f64) {
         self.time = time;

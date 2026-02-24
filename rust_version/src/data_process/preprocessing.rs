@@ -2,7 +2,7 @@
 
 use ndarray::{Array1, Array2};
 use polars::prelude::*;
-use std::collections::HashMap;
+//use std::collections::HashMap;
 //necessario per il calcolo della moda con valori che possono
 //essere
 use ordered_float::NotNan;
@@ -78,10 +78,10 @@ impl ColumnsTypeConvertion for DataFrame {
         &self,
         target_cols: Vec<i32>,
     ) -> Result<(Array2<f64>, Array1<i32>), AppError> {
-        // features: f64
+        //features: f64
         let sample_arr = self.to_ndarray::<Float64Type>(IndexOrder::Fortran)?;
 
-        // target: i32
+        //target: i32
         let target_arr = Array1::from(target_cols);
 
         Ok((sample_arr, target_arr))
@@ -100,79 +100,84 @@ pub trait ChunckedArrayFromColumn {
 //ho scritto due trait per il calcolo della moda.
 //non mi piace molto perchè il codice è duplicato
 //ciò che cambia è il tipo di ritorno e il tipo del parametro
-pub trait ModaInt {
-    type Output: ModeNumber;
-    fn calculate_mode(&self) -> Option<Self::Output>;
+//ma sembra che rust ti obblighi a fare ciò
+pub trait MedianInt {
+    type Output: MedianNumber;
+    fn calculate_median(&self) -> Option<Self::Output>;
 }
 
-pub trait ModaFloat {
-    fn calculate_mode(&self) -> Option<f64>;
+pub trait MedianFloat {
+    fn calculate_median(&self) -> Option<f64>;
 }
 
-impl ModaInt for ChunkedArray<Int32Type> {
+impl MedianInt for ChunkedArray<Int32Type> {
     type Output = i32;
-    fn calculate_mode(&self) -> Option<Self::Output> {
-        let mut occurrences = HashMap::new();
-
-        for value in self.iter() {
-            *occurrences.entry(value).or_insert(0) += 1;
+    fn calculate_median(&self) -> Option<Self::Output> {
+        //Raccoglie tutti i valori validi (ignora eventuali null)
+        let mut values: Vec<i32> = self.iter().filter_map(|v| v).collect();
+        
+        if values.is_empty() {
+            return None;
         }
-
-        occurrences
-            .into_iter()
-            .max_by(|(a, ca), (b, cb)| {
-                //controlla prima se i conteggi di a e b sono uguali
-                //se sono uguali allora prende il minore tra le chiavi
-                //quindi i valori
-                ca.cmp(cb).then_with(|| b.cmp(a))
-            })
-            .map(|(val, _)| val)?
+        
+        //Ordina i valori per trovare la mediana
+        values.sort_unstable();
+        let len = values.len();
+        
+        //Mediana: se dispari, elemento centrale; se pari, elemento centrale inferiore
+        if len % 2 == 1 {
+            Some(values[len / 2])
+        } else {
+            Some(values[len / 2 - 1])
+        }
     }
 }
 
-impl ModaInt for ChunkedArray<Int64Type> {
+impl MedianInt for ChunkedArray<Int64Type> {
     type Output = i64;
-    fn calculate_mode(&self) -> Option<Self::Output> {
-        let mut occurrences = HashMap::new();
-
-        for value in self.iter() {
-            *occurrences.entry(value).or_insert(0) += 1;
+    fn calculate_median(&self) -> Option<Self::Output> {
+        //Raccoglie tutti i valori validi (ignora eventuali null)
+        let mut values: Vec<i64> = self.iter().filter_map(|v| v).collect();
+        
+        if values.is_empty() {
+            return None;
         }
-
-        occurrences
-            .into_iter()
-            .max_by(|(a, ca), (b, cb)| {
-                //controlla prima se i conteggi di a e b sono uguali
-                //se sono uguali allora prende il minore tra le chiavi
-                //quindi i valori
-                ca.cmp(cb).then_with(|| b.cmp(a))
-            })
-            .map(|(val, _)| val)?
+        
+        //Ordina i valori per trovare la mediana
+        values.sort_unstable();
+        let len = values.len();
+        
+        //Mediana: se dispari, elemento centrale; se pari, elemento centrale inferiore
+        if len % 2 == 1 {
+            Some(values[len / 2])
+        } else {
+            Some(values[len / 2 - 1])
+        }
     }
 }
-//cambia perchè è necessario l'uso di NotNan per compatibilità con le
-//chiavi di hashMap
-impl ModaFloat for ChunkedArray<Float64Type> {
-    fn calculate_mode(&self) -> Option<f64> {
-        let mut occurrences: HashMap<NotNan<f64>, i32> = HashMap::new();
+//cambia perchè è necessario l'uso di NotNan per compatibilità con l'ordinamento
+impl MedianFloat for ChunkedArray<Float64Type> {
+   fn calculate_median(&self) -> Option<f64> {
+        //Raccoglie i valori non null e li converte in NotNan (filtra eventuali NaN)
+        let mut values: Vec<NotNan<f64>> = self
+            .into_no_null_iter()
+            .filter_map(|v| NotNan::new(v).ok())
+            .collect();
 
-        for value in self.into_no_null_iter() {
-            let key = NotNan::new(value).ok()?;
-            *occurrences.entry(key).or_insert(0) += 1;
+        if values.is_empty() {
+            return None;
         }
-        //ora è necessario contare le occorrenze per determinare la moda
-        //Questa versione tiene conto dello scenario di diversi valori
-        //alternativi per la moda, e per questione di coerenza con
-        //il progetto pandas, prendo il valore minore tra i due
-        occurrences
-            .into_iter()
-            .max_by(|(a, ca), (b, cb)| {
-                //controlla prima se i conteggi di a e b sono uguali
-                //se sono uguali allora prende il minore tra le chiavi
-                //quindi i valori
-                ca.cmp(cb).then_with(|| b.cmp(a))
-            })
-            .map(|(val, _)| val.into_inner())
+
+        //Ora sort_unstable funziona perché NotNan<f64> implementa Ord
+        values.sort_unstable();
+
+        let len = values.len();
+        //Mediana inferiore: se dispari, elemento centrale; se pari, elemento centrale inferiore
+        if len % 2 == 1 {
+            Some(values[len / 2].into_inner())
+        } else {
+            Some(values[len / 2 - 1].into_inner())
+        }
     }
 }
 
@@ -182,11 +187,11 @@ pub enum NumericCA<'a> {
     Float64(&'a ChunkedArray<Float64Type>),
     Int64(&'a ChunkedArray<Int64Type>),
 }
-pub trait ModeNumber {}
-impl ModeNumber for i32 {}
-impl ModeNumber for i64 {}
+pub trait MedianNumber {}
+impl MedianNumber for i32 {}
+impl MedianNumber for i64 {}
 
-// implementazione per il type column di Polars
+//implementazione per il type column di Polars
 impl ChunckedArrayFromColumn for Column {
     fn get_chuncked_array_from_column_type(
         &self,
@@ -232,7 +237,7 @@ pub(crate) mod private {
             idx: usize,
         ) -> Result<(), PolarsError>;
 
-        fn fill_dataframe_median(
+        fn fill_dataframe_mean(
             &mut self,
             chuncked: NumericCA,
             idx: usize,
@@ -263,24 +268,24 @@ impl private::FillNullPolars for DataFrame {
     fn fill_dataframe_mode(&mut self, chuncked: NumericCA, idx: usize) -> Result<(), PolarsError> {
         match chuncked {
             NumericCA::Int32(ca) => {
-                let filled = ca.fill_null_with_values(ca.calculate_mode().unwrap())?;
+                let filled = ca.fill_null_with_values(ca.calculate_median().unwrap())?;
                 self.replace_column(idx, filled).unwrap();
                 Ok(())
             }
             NumericCA::Int64(ca) => {
-                let filled = ca.fill_null_with_values(ca.calculate_mode().unwrap())?;
+                let filled = ca.fill_null_with_values(ca.calculate_median().unwrap())?;
                 self.replace_column(idx, filled).unwrap();
                 Ok(())
             }
             NumericCA::Float64(ca) => {
-                let filled = ca.fill_null_with_values(ca.calculate_mode().unwrap())?;
+                let filled = ca.fill_null_with_values(ca.calculate_median().unwrap())?;
                 self.replace_column(idx, filled).unwrap();
                 Ok(())
             }
         }
     }
     //implementazione per riempire i null con la media
-    fn fill_dataframe_median(
+    fn fill_dataframe_mean(
         &mut self,
         chuncked: NumericCA,
         idx: usize,
@@ -338,7 +343,7 @@ impl FillNullPolars for DataFrame {
             .map(|s| s.to_string())
             .collect();
 
-        // enumerate è essenziale per ottenere l'indice della colonna
+        //enumerate è essenziale per ottenere l'indice della colonna
         for (idx, name) in names.into_iter().enumerate() {
             let s = df_i.column(&name)?;
             if s.null_count() != 0 && cat_cols.contains(name.as_str()) {
@@ -346,7 +351,7 @@ impl FillNullPolars for DataFrame {
                 self.fill_dataframe_mode(chuncked, idx)?;
             } else if s.null_count() != 0 && !cat_cols.contains(name.as_str()) {
                 let chuncked = s.get_chuncked_array_from_column_type(s.dtype())?;
-                self.fill_dataframe_median(chuncked, idx)?;
+                self.fill_dataframe_mean(chuncked, idx)?;
             } else {
                 continue;
             }
@@ -354,7 +359,7 @@ impl FillNullPolars for DataFrame {
         Ok(())
     }
 }
-
+//trait e implementazioni per il metodo di scalatura standard
 pub trait ScalerEncoder: private::ScalersEncoders {
     fn scaler_encoder_df(
         &mut self,

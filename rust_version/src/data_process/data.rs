@@ -13,8 +13,8 @@ const DATASETS: [&str; 5] = [
 ];
 
 //Definizione dello schema di un dataset. Ha due informazioni correlate:
-// Nome del file.csv
-// Array con il nome delle colonne di dati categorici. Serve per il One-hot encoding
+//Nome del file.csv
+//Array con il nome delle colonne di dati categorici. Serve per il One-hot encoding
 pub struct DatasetInfo {
     file: &'static str,
     categorical_cols: &'static [&'static str],
@@ -31,14 +31,14 @@ impl DatasetInfo {
     }
 }
 
-// possibili errori di accesso ai dati
+//possibili errori di accesso ai dati
 #[derive(Debug)]
 pub enum DatasetError {
     //se un utente seleziona un dataset fuori dal range, ottiene questo errore
     IndexOutOfBounds { index: usize },
 }
 
-// preleva lo schema del dataset selezionato. UNICO PUNTO DI ACCESSO ESTERNO
+//preleva lo schema del dataset selezionato. UNICO PUNTO DI ACCESSO ESTERNO
 pub fn get_dataset_info(index: Option<usize>) -> Result<&'static DatasetInfo, DatasetError> {
     //se l'input è nullo, l'indice si riferisce al primo dataset
     let idx = index.unwrap_or(3);
@@ -47,7 +47,7 @@ pub fn get_dataset_info(index: Option<usize>) -> Result<&'static DatasetInfo, Da
         .ok_or(DatasetError::IndexOutOfBounds { index: idx })
 }
 
-// Istanza costante dei degli schemi dei csv supportati
+//Istanza costante dei degli schemi dei csv supportati
 const DATASETS_INFO: &[DatasetInfo] = &[
     DatasetInfo {
         file: DATASETS[0],
