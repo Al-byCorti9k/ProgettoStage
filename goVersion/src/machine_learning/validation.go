@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"fortio.org/progressbar"
+	dataprocess "github.com/Al-byCorti9k/ProgettoStage/goVersion/src/data_process"
 	"gonum.org/v1/gonum/optimize"
 )
 
@@ -21,7 +22,7 @@ import (
 // La funzione converte tutti i valori in float64; se la conversione fallisce,
 // restituisce un errore.
 func CSVToXY(r io.Reader, targetColumn string) ([][]float64, []float64, error) {
-	// Apre il file. È importante gestire l'errore e chiudere il file con defer.
+	//Apre il file. È importante gestire l'errore e chiudere il file con defer.
 	//file, err := os.Open(filename)
 	reader := csv.NewReader(r)
 	records, err := reader.ReadAll()
@@ -29,19 +30,19 @@ func CSVToXY(r io.Reader, targetColumn string) ([][]float64, []float64, error) {
 		return nil, nil, err
 	}
 	//defer file.Close()
-	// Crea un lettore CSV e legge tutto il contenuto in memoria.
+	//Crea un lettore CSV e legge tutto il contenuto in memoria.
 	//reader := csv.NewReader(file)
 	//records, err := reader.ReadAll()
 	//if err != nil {
 	//	return nil, nil, err
 	//}
-	// Controlla che ci sia almeno un'intestazione più una riga di dati.
+	//Controlla che ci sia almeno un'intestazione più una riga di dati.
 	if len(records) < 2 {
 		return nil, nil, fmt.Errorf("il CSV non contiene dati")
 	}
 	//La prima riga è l'intestazione.
 	header := records[0]
-	// Trova indice colonna target
+	//Trova indice colonna target
 	targetIndex := -1
 	for i, colName := range header {
 		if colName == targetColumn {
@@ -52,18 +53,18 @@ func CSVToXY(r io.Reader, targetColumn string) ([][]float64, []float64, error) {
 	if targetIndex == -1 {
 		return nil, nil, fmt.Errorf("colonna '%s' non trovata", targetColumn)
 	}
-	// Righe dati (salta header)
+	//Righe dati (salta header)
 	data := records[1:]
-	// Prealloca X e Y con la capacità giusta per evitare riallocazioni.
+	//Prealloca X e Y con la capacità giusta per evitare riallocazioni.
 	X := make([][]float64, len(data))
 	Y := make([]float64, len(data))
-	// Itera su ogni riga di dati.
+	//Itera su ogni riga di dati.
 	for i, row := range data {
-		// Verifica che la riga abbia lo stesso numero di colonne dell'intestazione.
+		//Verifica che la riga abbia lo stesso numero di colonne dell'intestazione.
 		if len(row) != len(header) {
 			return nil, nil, fmt.Errorf("numero colonne inconsistente alla riga %d", i+1)
 		}
-		// Converte il valore della colonna target in float64.
+		//Converte il valore della colonna target in float64.
 		Yval, err := strconv.ParseFloat(row[targetIndex], 64)
 		if err != nil {
 			return nil, nil, fmt.Errorf("errore conversione target riga %d: %v", i+1, err)
@@ -75,7 +76,7 @@ func CSVToXY(r io.Reader, targetColumn string) ([][]float64, []float64, error) {
 			if j == targetIndex {
 				continue
 			}
-			// Converte il valore in float64.
+			//Converte il valore in float64.
 			floatVal, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				return nil, nil, fmt.Errorf("errore conversione riga %d colonna %d: %v", i+1, j, err)
@@ -125,7 +126,7 @@ func LogisticRegression(x [][]float64, y []float64, params LogisticParams,
 		params.C = 1.0
 	}
 
-	// sklearn: lambda = 1 / (C * nSamples)
+	//sklearn: lambda = 1 / (C * nSamples)
 	//dalla formula che viene usata da scikit learn per il bias
 	lambda := 1.0 / (params.C * float64(nSamples))
 
@@ -183,20 +184,20 @@ func LogisticRegression(x [][]float64, y []float64, params LogisticParams,
 			//ritorna il valore di loss
 			return loss
 		},
-		// calcola la derivata della loss rispetto a ogni peso.
-		// l'approccio è analitico: viene usata la formula esatta
-		// e serve al solver lbfgs per individuare le direzioni di discesa
-		// in modo efficiente
+		//calcola la derivata della loss rispetto a ogni peso.
+		//l'approccio è analitico: viene usata la formula esatta
+		//e serve al solver lbfgs per individuare le direzioni di discesa
+		//in modo efficiente
 		Grad: func(grad, w []float64) {
-			// Il vettore `grad` deve contenere le derivate parziali della funzione di loss
-			// rispetto a ciascun peso (e, opzionalmente, al bias). All'ingresso della funzione
-			// `grad` è un'area di memoria già allocata ma con valori indeterminati. Dobbiamo
-			// inizializzarla a zero prima di accumulare i contributi.
+			//Il vettore `grad` deve contenere le derivate parziali della funzione di loss
+			//rispetto a ciascun peso (e, opzionalmente, al bias). All'ingresso della funzione
+			//`grad` è un'area di memoria già allocata ma con valori indeterminati. Dobbiamo
+			//inizializzarla a zero prima di accumulare i contributi.
 			for j := range grad {
 				grad[j] = 0
 			}
-			// Itera su tutti i campioni del training set (nSamples) per calcolare il contributo
-			// di ogni campione al gradiente.
+			//Itera su tutti i campioni del training set (nSamples) per calcolare il contributo
+			//di ogni campione al gradiente.
 			for i := 0; i < nSamples; i++ {
 				var dot float64
 				for j := 0; j < nFeatures; j++ {
@@ -208,7 +209,7 @@ func LogisticRegression(x [][]float64, y []float64, params LogisticParams,
 				//ottiene la probabilità predetta schiacciandola
 				//con valori compresi da 0 e 1
 				prob := sigmoid(dot)
-				// Questo valore è la base per il gradiente della log‑loss.
+				//Questo valore è la base per il gradiente della log‑loss.
 				diff := prob - y[i]
 
 				weight := 1.0
@@ -217,39 +218,39 @@ func LogisticRegression(x [][]float64, y []float64, params LogisticParams,
 						weight = params.ClassWeight[y[i]]
 					}
 				*/
-				// Aggiorna il gradiente per ogni peso relativo alle feature (j = 0..nFeatures-1).
-				// La formula analitica della derivata della log‑loss (senza regolarizzazione) per il peso w_j è:  ∂L/∂w_j = (1/n) * Σ (h_i - y_i) * x_{i,j}
-				// Qui stiamo accumulando la somma non ancora divisa per n.
+				//Aggiorna il gradiente per ogni peso relativo alle feature (j = 0..nFeatures-1).
+				//La formula analitica della derivata della log‑loss (senza regolarizzazione) per il peso w_j è:  ∂L/∂w_j = (1/n) * Σ (h_i - y_i) * x_{i,j}
+				//Qui stiamo accumulando la somma non ancora divisa per n.
 				for j := 0; j < nFeatures; j++ {
 					grad[j] += weight * diff * x[i][j]
 				}
-				// Se è incluso il bias, aggiorniamo anche la sua derivata.
-				// La derivata rispetto al bias è: (1/n) * Σ (h_i - y_i)
+				//Se è incluso il bias, aggiorniamo anche la sua derivata.
+				//La derivata rispetto al bias è: (1/n) * Σ (h_i - y_i)
 				if params.FitIntercept {
 					grad[nFeatures] += weight * diff
 				}
 			}
-			// Dopo aver sommato il contributo di tutti i campioni, dividiamo
-			// ciascuna componente del gradiente per il numero di campioni
-			//  nSamples.
-			// In questo modo otteniamo il gradiente medio della loss (senza regolarizzazione).
+			//Dopo aver sommato il contributo di tutti i campioni, dividiamo
+			//ciascuna componente del gradiente per il numero di campioni
+			//nSamples.
+			//In questo modo otteniamo il gradiente medio della loss (senza regolarizzazione).
 			for j := 0; j < len(grad); j++ {
 				grad[j] /= float64(nSamples)
 			}
-			// Se è attiva la regolarizzazione L2, aggiungiamo il gradiente del termine di penalty.
-			// La loss regolarizzata è: L_tot = L_orig + (λ/2) * Σ w_j²  (solo sui pesi, non sul bias).
-			// La derivata aggiuntiva per w_j è: λ * w_j.
-			// Nota: λ = 1 / (C * nSamples) come calcolato all'inizio di LogisticRegression.
+			//Se è attiva la regolarizzazione L2, aggiungiamo il gradiente del termine di penalty.
+			//La loss regolarizzata è: L_tot = L_orig + (λ/2) * Σ w_j²  (solo sui pesi, non sul bias).
+			//La derivata aggiuntiva per w_j è: λ * w_j.
+			//Nota: λ = 1 / (C * nSamples) come calcolato all'inizio di LogisticRegression.
 			if params.Penalty == "l2" {
 				for j := 0; j < nFeatures; j++ {
 					grad[j] += lambda * w[j]
 				}
-				// Il bias NON viene regolarizzato (come in scikit‑learn), quindi nessuna aggiunta per grad[nFeatures].
+				//Il bias NON viene regolarizzato (come in scikit‑learn), quindi nessuna aggiunta per grad[nFeatures].
 			}
 		},
 	}
 
-	// Imposta MaxIter = 50 per essere identici a scikit-learn
+	//Imposta MaxIter = 50 per essere identici a scikit-learn
 	settings := optimize.Settings{
 		MajorIterations:   params.MaxIter,
 		GradientThreshold: params.Tol,
@@ -279,8 +280,8 @@ func Predict(x [][]float64, weights []float64, fitIntercept bool) float64 {
 		//si moltiplica ogni valore della riga per i pesi.
 		//i risultati si sommano cumulativamente
 		//in sostanza stiamo calcolando il prodotto scalare tra le feature
-		// e i relativi pesi. Il risultato ci porta alla probabilità
-		// y = w_1*x_1 +...+ w_n*x_n + b (b è il bias)
+		//e i relativi pesi. Il risultato ci porta alla probabilità
+		//y = w_1*x_1 +...+ w_n*x_n + b (b è il bias)
 		for j := 0; j < nFeatures; j++ {
 			dot += x[i][j] * weights[j]
 		}
@@ -340,7 +341,7 @@ func MCC(yTrue []int, yPred []int) float64 {
 	den := math.Sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
 
 	if den == 0 {
-		return 0 // caso speciale, MCC non definito
+		return 0 //caso speciale, MCC non definito
 	}
 	//https://en.wikipedia.org/wiki/Phi_coefficient#:~:text=The%20MCC%20can%20be%20calculated%20directly%20from%20the%20confusion%20matrix%20using%20the%20formula
 	return num / den
@@ -410,15 +411,17 @@ func LeaveOneOutCV(X [][]float64, y []float64) float64 {
 	}
 	bar.Progress(100)
 	bar.Redraw()
+	yInt := dataprocess.FloatSliceToIntSlice(y)
 	//Convertiamo y in []int
-	yInt := make([]int, nSamples)
-	for i, v := range y {
-		if v >= 0.5 {
-			yInt[i] = 1
-		} else {
-			yInt[i] = 0
-		}
-	}
+	/*
+		yInt := make([]int, nSamples)
+		for i, v := range y {
+			if v >= 0.5 {
+				yInt[i] = 1
+			} else {
+				yInt[i] = 0
+			}
+		}*/
 
 	//Calcoliamo MCC
 	mcc := MCC(yInt, predictions)

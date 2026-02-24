@@ -23,6 +23,7 @@ func FillColumnsNanValues(dfInfo *DataframeInfo) *DataframeInfo {
 	return &finalDfInfo
 }
 
+// riempie i valori vuoti con la media
 func fillNanWithMean(dfInfo *DataframeInfo) DataframeInfo {
 
 	colsInfo, _ := GetDatasetInfo(&dfInfo.Id)
@@ -30,7 +31,7 @@ func fillNanWithMean(dfInfo *DataframeInfo) DataframeInfo {
 	//prendo tutte le colonne che non sono categoriche
 	allCols := dfInfo.Df.Names()
 
-	// Inizializziamo dfWorking con il dataframe originale
+	//Inizializziamo dfWorking con il dataframe originale
 	dfWorking := dfInfo.Df
 	//nel caso nessuna colonna avesse valori nulli
 	i := 0
@@ -89,7 +90,7 @@ func fillNanWithMedian(dfInfo *DataframeInfo) DataframeInfo {
 
 	cols, _ := GetDatasetInfo(&dfInfo.Id)
 	catCols := cols.VecToHashSet()
-	// Inizializziamo dfWorking con il dataframe originale
+	//Inizializziamo dfWorking con il dataframe originale
 	dfWorking := dfInfo.Df
 	//nel caso nessuna colonna avesse valori nulli
 	i := 0
@@ -141,33 +142,33 @@ func calculateMode(s *series.Series) float64 {
 func calculateMedian(s *series.Series) float64 {
 	values := make([]float64, s.Len())
 
-	// Copia gli elementi della serie in un array
+	//Copia gli elementi della serie in un array
 	for i := 0; i < s.Len(); i++ {
 		values[i] = s.Elem(i).Float()
 	}
 
-	// Ordina l'array
+	//Ordina l'array
 	sort.Float64s(values)
 
-	// Calcola la mediana inferiore
+	//Calcola la mediana inferiore
 	n := len(values)
 
 	if n%2 == 1 {
-		// Se il numero di elementi è dispari, la mediana è l'elemento centrale
+		//Se il numero di elementi è dispari, la mediana è l'elemento centrale
 		return values[n/2]
 	} else {
-		// Se il numero di elementi è pari, la mediana è l'elemento centrale inferiore
+		//Se il numero di elementi è pari, la mediana è l'elemento centrale inferiore
 		return values[n/2-1]
 	}
 }
 
 // riempie i valori nulli delle series con i valori che vuoi.
 func fillMissingValues(s *series.Series, replacement float64) []float64 {
-	// Estraiamo i valori come float64
+	//Estraiamo i valori come float64
 	vals := s.Float()
 
 	for i, v := range vals {
-		// In Go, math.IsNaN è il modo standard per controllare i valori mancanti nei float
+		//In Go, math.IsNaN è il modo standard per controllare i valori mancanti nei float
 		if math.IsNaN(v) {
 			vals[i] = replacement
 		}
@@ -230,7 +231,7 @@ func columnToDummies(dfInfo *DataframeInfo, targetColumn string) DataframeInfo {
 		//generiamo la nuova colonna
 		newCol := series.Floats(dummyData)
 
-		// Impostiamo il nome alla nuova serie
+		//Impostiamo il nome alla nuova serie
 		newCol.Name = colName
 		//modifichiamo la colonna dal dataframe originale
 		dfWorking = dfWorking.Mutate(newCol)
@@ -245,13 +246,13 @@ func columnToDummies(dfInfo *DataframeInfo, targetColumn string) DataframeInfo {
 // implementazione custom della scalatura standard
 func (self *DataframeInfo) StandardScalar() *DataframeInfo {
 
-	// Otteniamo i nomi delle colonne
+	//Otteniamo i nomi delle colonne
 	colsInfo, _ := GetDatasetInfo(&self.Id)
 	catCols := colsInfo.VecToHashSet()
 	//prendo tutte le colonne che non sono categoriche
 	allCols := self.Df.Names()
 
-	// Inizializziamo dfWorking con il dataframe originale
+	//Inizializziamo dfWorking con il dataframe originale
 	dfWorking := self.Df
 
 	for _, col := range allCols {
@@ -267,20 +268,20 @@ func (self *DataframeInfo) StandardScalar() *DataframeInfo {
 				continue
 			}
 
-			// Estraiamo i valori della colonna convertendoli tutti in float64
+			//Estraiamo i valori della colonna convertendoli tutti in float64
 			vals := colToCheck.Float()
 
-			// Creiamo una nuova serie di tipo Float con la stessa lunghezza
-			// e applichiamo la formula dello Z-score
+			//Creiamo una nuova serie di tipo Float con la stessa lunghezza
+			//e applichiamo la formula dello Z-score
 			for i := 0; i < len(vals); i++ {
 				vals[i] = (vals[i] - mean) / std
 			}
 
-			// Creiamo la nuova serie Gota forzando il tipo Float
+			//Creiamo la nuova serie Gota forzando il tipo Float
 			normalizedCol := series.Floats(vals)
-			normalizedCol.Name = col // Mantieni il nome originale della colonna
+			normalizedCol.Name = col //Mantieni il nome originale della colonna
 
-			// Sostituiamo la colonna nel dataframe
+			//Sostituiamo la colonna nel dataframe
 			dfWorking = dfWorking.Mutate(normalizedCol)
 		}
 

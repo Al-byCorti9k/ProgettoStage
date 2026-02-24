@@ -134,6 +134,7 @@ func (di *DataframeInfo) setDataframeID(newID int) {
 	di.Id = newID
 }
 
+// converte una slice float in una int
 func FloatSliceToIntSlice(y []float64) []int {
 	res := make([]int, len(y))
 	for i, v := range y {

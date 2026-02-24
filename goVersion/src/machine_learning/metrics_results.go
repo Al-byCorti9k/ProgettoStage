@@ -12,21 +12,21 @@ import (
 // WriteCSV scrive i dati in formato CSV su un io.Writer (es. os.Stdout, file, buffer).
 // è un'interfaccia di Go che va implementata per tipo, in questo caso l'ho implementata per ResultData
 func (r *ResultData) WriteCSV(w io.Writer) error {
-	// Crea un nuovo scrittore CSV che utilizzerà il writer fornito.
-	// csv.NewWriter restituisce un oggetto che bufferizza internamente i dati
-	// per efficienza.
+	//Crea un nuovo scrittore CSV che utilizzerà il writer fornito.
+	//csv.NewWriter restituisce un oggetto che bufferizza internamente i dati
+	//per efficienza.
 	writer := csv.NewWriter(w)
 
-	// defer writer.Flush() garantisce che, al termine della funzione,
-	// tutti i dati ancora nel buffer interno vengano forzati a essere scritti
-	// nel writer sottostante (ad esempio nel file). Se non chiamassimo Flush,
-	// alcuni dati potrebbero rimanere in memoria e non essere effettivamente
-	// salvati su disco.
+	//defer writer.Flush() garantisce che, al termine della funzione,
+	//tutti i dati ancora nel buffer interno vengano forzati a essere scritti
+	//nel writer sottostante (ad esempio nel file). Se non chiamassimo Flush,
+	//alcuni dati potrebbero rimanere in memoria e non essere effettivamente
+	//salvati su disco.
 	defer writer.Flush()
 
-	// Scrive l'intestazione del CSV.
-	// Write accetta una slice di stringhe e la trasforma in una riga CSV
-	// (virgole come separatori, eventuali virgolette se necessario).
+	//Scrive l'intestazione del CSV.
+	//Write accetta una slice di stringhe e la trasforma in una riga CSV
+	//(virgole come separatori, eventuali virgolette se necessario).
 	if err := writer.Write([]string{
 		"Dataset",
 		"Operating system",
@@ -40,37 +40,37 @@ func (r *ResultData) WriteCSV(w io.Writer) error {
 		return err
 	}
 
-	// Itera su tutte le righe di dati presenti nella struct.
-	// Le slice (Dataset, Os, TimeS, ecc.) hanno tutte la stessa lunghezza,
-	// quindi possiamo usare l'indice i per accedere ai valori corrispondenti.
+	//Itera su tutte le righe di dati presenti nella struct.
+	//Le slice (Dataset, Os, TimeS, ecc.) hanno tutte la stessa lunghezza,
+	//quindi possiamo usare l'indice i per accedere ai valori corrispondenti.
 	for i := 0; i < len(r.Dataset); i++ {
-		// Crea una slice di stringhe che rappresenta una riga del CSV.
-		// I valori numerici (float64) devono essere convertiti in stringhe
-		// perché il pacchetto csv lavora esclusivamente con stringhe.
-		// fmt.Sprintf viene utilizzato proprio per questa conversione:
-		// trasforma un float in una rappresentazione testuale.
-		// Il formato "%f" produce una notazione decimale senza esponente,
-		// con 6 cifre decimali di default
+		//Crea una slice di stringhe che rappresenta una riga del CSV.
+		//I valori numerici (float64) devono essere convertiti in stringhe
+		//perché il pacchetto csv lavora esclusivamente con stringhe.
+		//fmt.Sprintf viene utilizzato proprio per questa conversione:
+		//trasforma un float in una rappresentazione testuale.
+		//Il formato "%f" produce una notazione decimale senza esponente,
+		//con 6 cifre decimali di default
 		record := []string{
-			r.Dataset[i],                   // stringa, già pronta
-			r.Os[i],                        // stringa
-			r.TargetColumn[i],              // stringa
-			fmt.Sprintf("%f", r.TimeS[i]),  // float64 → stringa
-			fmt.Sprintf("%f", r.TimeMs[i]), // float64 → stringa
-			fmt.Sprintf("%f", r.Mcc[i]),    // float64 → stringa
-			fmt.Sprintf("%f", r.Energy[i]), // float64 → stringa
-			fmt.Sprintf("%s", r.Method[i]), // anche se è stringa, lo convertiamo per sicurezza
+			r.Dataset[i],                   //stringa, già pronta
+			r.Os[i],                        //stringa
+			r.TargetColumn[i],              //stringa
+			fmt.Sprintf("%f", r.TimeS[i]),  //float64 → stringa
+			fmt.Sprintf("%f", r.TimeMs[i]), //float64 → stringa
+			fmt.Sprintf("%f", r.Mcc[i]),    //float64 → stringa
+			fmt.Sprintf("%f", r.Energy[i]), //float64 → stringa
+			fmt.Sprintf("%s", r.Method[i]), //anche se è stringa, lo convertiamo per sicurezza
 		}
 
-		// Scrive la riga nel buffer CSV.
+		//Scrive la riga nel buffer CSV.
 		if err := writer.Write(record); err != nil {
 			return err
 		}
 	}
 
-	// Al termine del ciclo, il defer si occupa di chiamare Flush,
-	// che svuota il buffer e scrive effettivamente tutti i dati.
-	// Se non ci sono errori, restituisce nil.
+	//Al termine del ciclo, il defer si occupa di chiamare Flush,
+	//che svuota il buffer e scrive effettivamente tutti i dati.
+	//Se non ci sono errori, restituisce nil.
 	return nil
 }
 
@@ -88,7 +88,7 @@ func (r *ResultData) PrintRows() {
 		return
 	}
 
-	// Calcola la larghezza massima per ogni colonna (inclusa l'intestazione)
+	//Calcola la larghezza massima per ogni colonna (inclusa l'intestazione)
 	maxLen := struct {
 		dataset, os, target, timeS, timeMs, mcc, energy, method int
 	}{
@@ -103,7 +103,7 @@ func (r *ResultData) PrintRows() {
 	}
 
 	for i := 0; i < len(r.Dataset); i++ {
-		// Stringhe
+		//Stringhe
 		if l := len(r.Dataset[i]); l > maxLen.dataset {
 			maxLen.dataset = l
 		}
@@ -116,7 +116,7 @@ func (r *ResultData) PrintRows() {
 		if l := len(r.Method[i]); l > maxLen.method {
 			maxLen.method = l
 		}
-		// Numeri formattati
+		//Numeri formattati
 		if l := len(fmt.Sprintf("%.4f", r.TimeS[i])); l > maxLen.timeS {
 			maxLen.timeS = l
 		}
@@ -131,7 +131,7 @@ func (r *ResultData) PrintRows() {
 		}
 	}
 
-	// Stampa intestazione (allineata a sinistra)
+	//Stampa intestazione (allineata a sinistra)
 	fmt.Printf("%-*s %-*s %-*s %-*s %-*s %-*s %-*s %-*s\n",
 		maxLen.dataset, "Dataset",
 		maxLen.os, "Operating system",
@@ -142,7 +142,7 @@ func (r *ResultData) PrintRows() {
 		maxLen.energy, "energy consumption (kWh)",
 		maxLen.method, "methodology")
 
-	// Stampa righe
+	//Stampa righe
 	for i := 0; i < len(r.Dataset); i++ {
 		fmt.Printf("%-*s %-*s %-*s %-*s %-*s %-*s %-*s %-*s\n",
 			maxLen.dataset, r.Dataset[i],
@@ -193,23 +193,23 @@ func SetMethod(os string) string {
 
 // Salva la struct resultData in un csv nel persocorso results
 func (results *ResultData) SaveResultsToPath() {
-	// Ottieni la directory corrente
+	//Ottieni la directory corrente
 	currentDir, err := os.Getwd()
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
-	// Risali di due livelli (.. due volte)
+	//Risali di due livelli (.. due volte)
 	parentDir := filepath.Join(currentDir, "..", "results")
 
-	// Genera il nome file con timestamp
+	//Genera il nome file con timestamp
 	timestamp := time.Now().Format("2006-01-02_15h-04m-05s")
 	filename := fmt.Sprintf("experiment_go_%s.csv", timestamp)
 
-	// Combina percorso e nome file
+	//Combina percorso e nome file
 	filePath := filepath.Join(parentDir, filename)
 
-	// si assicura che la directory esista
+	//si assicura che la directory esista
 	//7 (proprietario): lettura (4) + scrittura (2) + esecuzione (1) = 7
 	//5 (gruppo): lettura (4) + esecuzione (1) = 5
 	//5 (altri): lettura (4) + esecuzione (1) = 5
@@ -218,16 +218,16 @@ func (results *ResultData) SaveResultsToPath() {
 		return
 	}
 
-	// Crea il file
+	//Crea il file
 	file, err := os.Create(filePath)
 	if err != nil {
 		fmt.Printf("Error creating file: %v\n", err)
 		return
 	}
-	// nella sintassi di GO, defer marchia le istruzioni che verranno eseguite solo al termine della funzione di dichiarazione
+	//nella sintassi di GO, defer marchia le istruzioni che verranno eseguite solo al termine della funzione di dichiarazione
 	defer file.Close()
 
-	// Scrive il CSV
+	//Scrive il CSV
 	if err := results.WriteCSV(file); err != nil {
 		fmt.Printf("Error writing CSV: %v\n", err)
 		return

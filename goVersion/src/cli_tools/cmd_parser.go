@@ -43,7 +43,7 @@ func ParseCliArgument() ConfigArgs {
 
 // funzione che controlla se gli argomenti siano validi
 func argsParse(myArgs *ConfigArgs) {
-	// Se isValid restituisce un errore, log.Fatal lo stampa e chiude il programma
+	//Se isValid restituisce un errore, log.Fatal lo stampa e chiude il programma
 	if err := myArgs.isValid(); err != nil {
 		log.Fatalf("Configuration's error: %v", err)
 	}
@@ -77,14 +77,14 @@ func (c *ConfigArgs) isValid() error {
 	lenD := len(c.DArgs)
 	lenT := len(c.CArgs)
 
-	// 1. Controllo: d deve essere tra 0 e 4
+	//Controllo: d deve essere tra 0 e 4
 	for _, id := range c.DArgs {
 		if id < 0 || id > 4 {
 			return fmt.Errorf("The dataset ID %d is not valid: it must be between 0 and 4.", id)
 		}
 	}
 
-	// "Va bene se -t non c'è (0), ma se c'è deve avere lo stesso numero di -d"
+	//Va bene se -t non c'è (0), ma se c'è deve avere lo stesso numero di -d
 	if lenT > 0 && lenT != lenD {
 		return fmt.Errorf("Input mismatch: received %d datasets (-d) but %d target columns (-t).", lenD, lenT)
 	}
@@ -158,8 +158,8 @@ func targetColumnIsBinary(dfInfo *dataprocess.DataframeInfo, columnName *string)
 	//estraiamo i valori della categoria come uno slice di stringhe
 	categories := aggregatedDf.Col(*columnName).Records()
 
-	// Verifichiamo se le categorie sono esattamente "0" e "1"
-	// Usiamo una mappa per gestire il fatto che l'ordine potrebbe variare
+	//Verifichiamo se le categorie sono esattamente "0" e "1"
+	//Usiamo una mappa per gestire il fatto che l'ordine potrebbe variare
 	valid := true
 	checkMap := map[string]bool{"0": false, "1": false}
 	//se c'è anche un solo valore discordante, il ciclo di ferma
@@ -197,7 +197,7 @@ func DatasetView() {
 		"CARDIAC_ARREST",
 		"DIABETES",
 	}
-	// Calcola la lunghezza massima dei nomi
+	//Calcola la lunghezza massima dei nomi
 	maxLen := 0
 	for _, name := range names {
 		if len(name) > maxLen {
@@ -205,7 +205,7 @@ func DatasetView() {
 		}
 	}
 
-	// Stampa con allineamento: il nome occupa esattamente maxLen caratteri (allineato a sinistra)
+	//Stampa con allineamento: il nome occupa esattamente maxLen caratteri (allineato a sinistra)
 	for i, name := range names {
 		fmt.Printf("%-*s: %d\n", maxLen, name, i)
 	}
