@@ -9,9 +9,9 @@ from codecarbon import OfflineEmissionsTracker
 def get_latest_experiment_file(directory):
     """
     Trova il file experiment_rust_*.csv più recente in base alla data di modifica.
-    Usato per identificare il file appena creato dall'eseguibile Rust.
+    Usato per identificare il file appena creato dall'eseguibile Go.
     """
-    files = list(directory.glob("experiment_rust_*.csv"))
+    files = list(directory.glob("experiment_go_*.csv"))
     if not files:
         return None
     # Restituisce il file con la data di modifica più recente
@@ -50,8 +50,8 @@ def run_experiment():
         print(f"\n--- Inizio Iterazione {i+1}/{iterations} ---")
         
         # Costruzione della riga di comando per l'eseguibile Rust
-        # L'eseguibile si trova nella stessa cartella di questo script, con nome rust_version.exe
-        cmd_list = [str(p.parent[1] / "src" / "goVersion.exe")]
+        # L'eseguibile si trova nella stessa cartella di questo script, con nome goVersion.exe
+        cmd_list = [str(p.parents[1] / "src" / "goVersion.exe")]
         if d_vector:
             cmd_list.extend(["-d", d_vector[i]])   # aggiunge il flag -d con il suo valore
         if t_vector:
@@ -77,21 +77,20 @@ def run_experiment():
             # Arresto del tracker (salva i dati di consumo nel file emissions.csv)
             tracker.stop()
 
-        # --- POST-ELABORAZIONE: AGGIUNTA DEL CONSUMO AL FILE GENERATO DA RUST ---
+        # --- POST-ELABORAZIONE: AGGIUNTA DEL CONSUMO AL FILE GENERATO DA GO ---
         # Verifica che il file emissions.csv sia stato creato
         if csv_carbon.exists():
             # Legge il file CSV delle emissioni
             df_carbon = pd.read_csv(csv_carbon)
             # Prende l'ultimo valore della colonna 'energy_consumed' (consumo in kWh)
-            ultimo_consumo = df_carbon.iloc[-1]['energy_consumed']
-            
-            # Trova il file experiment_rust_*.csv più recente (quello appena creato da Rust)
+            ultimo_consumo = df_carbon.iloc[-1]['energy_consumed']            
+            # Trova il file experiment_rust_*.csv più recente (quello appena creato da Go)
             target_file = get_latest_experiment_file(output_dir)
             
             # Se il file esiste e non è già stato processato in questa sessione
             if target_file and target_file not in session_files:
                 session_files.append(target_file)          # lo aggiunge alla lista per il merge
-                df_exp = pd.read_csv(target_file)          # legge il file generato da Rust
+                df_exp = pd.read_csv(target_file)          # legge il file generato da Go
                 
                 # Aggiunge una nuova colonna "energy consumption (kWh)" con il valore di consumo
                 # Se il file contiene più righe, assegna lo stesso valore a tutte
@@ -99,7 +98,7 @@ def run_experiment():
                 
                 # Sovrascrive il file con i dati arricchiti
                 df_exp.to_csv(target_file, index=False)
-                print(f"Dato ({ultimo_consumo} kWh) inserito in: {target_file.name}")
+                print(f"\nDato ({ultimo_consumo} kWh) inserito in: {target_file.name}")
             
             # Elimina il file emissions.csv per non accumulare dati di iterazioni precedenti
             csv_carbon.unlink()
