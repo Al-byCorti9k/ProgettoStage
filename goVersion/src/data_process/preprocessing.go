@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"math"
+	"sort" //per la mediana
 
 	"github.com/go-gota/gota/series"
 )
@@ -11,7 +12,7 @@ import (
 // funzione che gestice i valori vuoti di un dataframe
 func FillColumnsNanValues(dfInfo *DataframeInfo) *DataframeInfo {
 
-	df := fillNanWithMode(dfInfo)
+	df := fillNanWithMedian(dfInfo)
 
 	newDfInfo := DataframeInfoBuild(dfInfo.Id, &df.Df)
 
@@ -84,7 +85,7 @@ func calculateMean(s *series.Series) float64 {
 }
 
 // riempie le colonne categoriche con la moda
-func fillNanWithMode(dfInfo *DataframeInfo) DataframeInfo {
+func fillNanWithMedian(dfInfo *DataframeInfo) DataframeInfo {
 
 	cols, _ := GetDatasetInfo(&dfInfo.Id)
 	catCols := cols.VecToHashSet()
@@ -96,7 +97,7 @@ func fillNanWithMode(dfInfo *DataframeInfo) DataframeInfo {
 	for catCol, _ := range catCols {
 		colToCheck := dfWorking.Col(catCol)
 		if colToCheck.HasNaN() {
-			modeVal := calculateMode(&colToCheck)
+			modeVal := calculateMedian(&colToCheck)
 			//modifica il dataframe originale con la nuova colonna
 			dfWorking = dfWorking.Mutate(
 				series.New(fillMissingValues(&colToCheck, modeVal), series.Float, catCol))
@@ -113,6 +114,8 @@ func fillNanWithMode(dfInfo *DataframeInfo) DataframeInfo {
 }
 
 // Funzione di supporto per calcolare la moda in una Serie di Gota
+//la lascio come alternativa possibile già testata
+/*
 func calculateMode(s *series.Series) float64 {
 	counts := make(map[float64]int)
 	maxFreq := 0
@@ -131,6 +134,31 @@ func calculateMode(s *series.Series) float64 {
 	}
 
 	return mode
+}
+*/
+
+// Funzione di supporto per calcolare la mediana inferiore in una Serie di Gota
+func calculateMedian(s *series.Series) float64 {
+	values := make([]float64, s.Len())
+
+	// Copia gli elementi della serie in un array
+	for i := 0; i < s.Len(); i++ {
+		values[i] = s.Elem(i).Float()
+	}
+
+	// Ordina l'array
+	sort.Float64s(values)
+
+	// Calcola la mediana inferiore
+	n := len(values)
+
+	if n%2 == 1 {
+		// Se il numero di elementi è dispari, la mediana è l'elemento centrale
+		return values[n/2]
+	} else {
+		// Se il numero di elementi è pari, la mediana è l'elemento centrale inferiore
+		return values[n/2-1]
+	}
 }
 
 // riempie i valori nulli delle series con i valori che vuoi.
