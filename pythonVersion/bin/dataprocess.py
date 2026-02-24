@@ -117,7 +117,7 @@ numeric_trasformer = Pipeline(steps =
 
 categorical_trasformer = Pipeline(steps = 
                              [
-                                 ('moda', SimpleImputer(strategy="most_frequent")),
+                                 ('median', SimpleImputer(strategy="median")),
                                  ('onehot', OneHotEncoder(handle_unknown="ignore"))
                              ]     
                                   
@@ -231,7 +231,8 @@ def createCSV(savePath):
         dfCSV.to_csv(f"{pathlib.PurePath(p).parents[1]}/results/result_{esternProcess.now_str}.csv")
     else:
         dfCSV.to_csv(savePath)
-        
+# quando chiamo VTune Profiler, Viene creato un processo figlio indipendente. 
+# Il padre ha bisogno delle informazioni del figlio; rimane in attesa finchè non viene creato il file txt contenente le info        
 def createTXT():
     file_path = f"{pathlib.PurePath(p).parents[1]}/results/figlio_{now_str}.txt"
     with open(file_path, "w") as f:
