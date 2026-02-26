@@ -5,6 +5,7 @@ import pathlib
 
 import pandas as pd
 from sklearn.metrics import matthews_corrcoef
+import numpy as np
 
 import dataprocess
 import viewer
@@ -17,7 +18,7 @@ args = viewer.parser.parse_args()
 viewer.showAssociationList(args.al)
 
 # Prendiamo il nome del conda enviroment
-if not args.elevated and not args.ec :
+if not args.elevated and (args.ec or args.e) :
     dataprocess.setConda()
 
 #gestione casistica scelta multipla dei datasets. ottengo delle liste
@@ -49,14 +50,10 @@ for key, value in dtype_csv_dict.items():
         # preprocessing dei sample
         x_predictor = dataprocess.preprocessor.fit_transform(x_predictor)
         # preprocessing della colonna target
-        moda = y_response.mode()[0]
-        y_response = y_response.fillna(moda)
+        y_response_filled = dataprocess.targetColumnFillNaN(y_response) 
 
-        
-        
-
-        y_predict, times = dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
-        MCC = matthews_corrcoef(y_response, y_predict)
+        y_predict, times = dataprocess.LogisticRegressionValidation(x_predictor, y_response_filled)
+        MCC = matthews_corrcoef(y_response_filled, y_predict)
           
 
     os = dataprocess.checkOperatingSystem()

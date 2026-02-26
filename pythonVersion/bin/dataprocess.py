@@ -6,6 +6,7 @@ import time
 import pathlib
 from datetime import datetime
 import os
+import numpy as np 
 
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline, Pipeline
@@ -138,6 +139,24 @@ cvp = model_selection.LeaveOneOut()
 # preprocessare i dati è fondamentale per rendere comparabili i valori 
 # categorici con quelli numerici, i quali a loro volta vengono scalati 
 # per permettere un confronto adeguato
+def targetColumnFillNaN(y_response):
+    # Converti in float (gestisce NaN)
+        y_response_num = y_response.astype(float)
+
+        # Calcola mediana inferiore sui valori non nulli
+        valori_non_nulli = y_response_num.dropna()
+        # Usa .astype(int) per ottenere valori interi 
+        # il 50% percentile è la mediana
+        median_lower = np.percentile(valori_non_nulli.astype(int), 50, method='lower')
+
+        # Sostituisci i NaN con la mediana
+        y_response_num = y_response_num.fillna(median_lower)
+
+        # Riconverti in interi e poi in categorico
+        y_response_filled = y_response_num.astype(int)          
+        y_response_filled = y_response_filled.astype('category') 
+        return y_response_filled
+
 
 # creo una pipeline che effettua il preprocessing e poi applica il modello
 #clf = make_pipeline(preprocessor, model)
@@ -145,7 +164,7 @@ cvp = model_selection.LeaveOneOut()
 # viene effettuata la LOOCV predittiva, in modo da ottenere 
 # le previsioni di ciascun fold, per poi valutare la prestazione
 # del modello con la metrica MCC
-def Logistic_Regression_Validation(x_predictor, y_response):
+def LogisticRegressionValidation(x_predictor, y_response):
    
     start = time.time()
     y_predict = model_selection.cross_val_predict(model, x_predictor, y_response, cv = cvp )
@@ -246,7 +265,8 @@ def checkOperatingSystem():
 
 
 # sezione dedicata a funzioni per l'estrazione e il salvataggio su un file del 
-# nome dell'enviroment conda. Se l'utente non sta eseguendo il programma da un enviroment
+# nome dell'enviroment conda. 
+# Se l'utente non sta eseguendo il programma da un enviroment
 # conda ma rispetta comunque i requisiti, il programma procederà comunque
 condaF = pathlib.Path(p).parents[1] / "conda.flag"
 
@@ -256,7 +276,7 @@ def setConda():
         except:
             eoe = "notConda"
         condaF.write_text(eoe)
-# nota che una volta che prima di ritornare il nome dell'ENV di conda, 
+# nota che prima di ritornare il nome dell'ENV di conda, 
 # elimina il file     
 def readConda():
     conda = condaF.read_text()
