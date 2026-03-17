@@ -84,7 +84,7 @@ func (r *ResultData) WriteCSV(w io.Writer) error {
 // stampato.
 func (r *ResultData) PrintRows() {
 	if len(r.Dataset) == 0 {
-		fmt.Println("There are no results")
+		fmt.Println("There are no results to print")
 		return
 	}
 
@@ -193,6 +193,10 @@ func SetMethod(os string) string {
 
 // Salva la struct resultData in un csv nel persocorso results
 func (results *ResultData) SaveResultsToPath() {
+	if len(results.Dataset) == 0 {
+		fmt.Println("There are no results to save")
+		return
+	}
 	//Ottieni la directory corrente
 	currentDir, err := os.Getwd()
 	if err != nil {

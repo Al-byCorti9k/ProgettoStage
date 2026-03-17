@@ -1,7 +1,8 @@
 package main
 
 import (
-	"bytes"
+	//
+	// "bytes"
 	"fmt"
 	"log"
 	"runtime"
@@ -50,12 +51,13 @@ func main() {
 		//qui avviene il preprocessing, quindi riempimento dei valori nulli, la scalatura standard e il one-hot-encoding
 		dfInfoProcessed := dataprocess.FillColumnsNanValues(&dfInfo).StandardScalar().OneHotEncoding(targetColumn)
 		//genero un file generico dove viene esportato il dataframe processato
-		var buf bytes.Buffer
+		//var buf bytes.Buffer
 		//Esportiamo il DataFrame nel file
-		err := dfInfoProcessed.Df.WriteCSV(&buf)
-		cli.HandleError(err)
+		//err := dfInfoProcessed.Df.WriteCSV(&buf)
+		//cli.HandleError(err)
 
-		X, Y, err := learning.CSVToXY(&buf, targetColumn)
+		//X, Y, err := learning.CSVToXY(&buf, targetColumn)
+		X, Y, err := learning.DataFrameToXY(&dfInfoProcessed.Df, targetColumn)
 		cli.HandleError(err)
 
 		//calcolo il valore di mcc e il tempo di esecuzione

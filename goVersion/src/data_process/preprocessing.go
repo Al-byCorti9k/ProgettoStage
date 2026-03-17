@@ -85,7 +85,7 @@ func calculateMean(s *series.Series) float64 {
 	return sum / float64(count)
 }
 
-// riempie le colonne categoriche con la moda
+// riempie le colonne categoriche con la mediana
 func fillNanWithMedian(dfInfo *DataframeInfo) DataframeInfo {
 
 	cols, _ := GetDatasetInfo(&dfInfo.Id)
@@ -98,10 +98,10 @@ func fillNanWithMedian(dfInfo *DataframeInfo) DataframeInfo {
 	for catCol, _ := range catCols {
 		colToCheck := dfWorking.Col(catCol)
 		if colToCheck.HasNaN() {
-			modeVal := calculateMedian(&colToCheck)
+			median := calculateMedian(&colToCheck)
 			//modifica il dataframe originale con la nuova colonna
 			dfWorking = dfWorking.Mutate(
-				series.New(fillMissingValues(&colToCheck, modeVal), series.Float, catCol))
+				series.New(fillMissingValues(&colToCheck, median), series.Float, catCol))
 			i++
 		}
 	}

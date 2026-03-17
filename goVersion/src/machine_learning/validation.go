@@ -1,15 +1,15 @@
 package machinelearning
 
 import (
-	"encoding/csv"
+	//"encoding/csv"
 	"fmt"
-	"io"
+	//"io"
 	"math"
 
-	"strconv"
-
+	//"strconv"
 	"fortio.org/progressbar"
 	dataprocess "github.com/Al-byCorti9k/ProgettoStage/goVersion/src/data_process"
+	"github.com/go-gota/gota/dataframe"
 	"gonum.org/v1/gonum/optimize"
 )
 
@@ -21,70 +21,82 @@ import (
 //
 // La funzione converte tutti i valori in float64; se la conversione fallisce,
 // restituisce un errore.
-func CSVToXY(r io.Reader, targetColumn string) ([][]float64, []float64, error) {
-	//Apre il file. È importante gestire l'errore e chiudere il file con defer.
-	//file, err := os.Open(filename)
-	reader := csv.NewReader(r)
-	records, err := reader.ReadAll()
-	if err != nil {
-		return nil, nil, err
+func DataFrameToXY(df *dataframe.DataFrame, targetColumn string) ([][]float64, []float64, error) {
+
+	// Controlla che il DataFrame non sia vuoto
+	if df.Nrow() == 0 {
+		return nil, nil, fmt.Errorf("empty dataframe")
 	}
-	//defer file.Close()
-	//Crea un lettore CSV e legge tutto il contenuto in memoria.
-	//reader := csv.NewReader(file)
-	//records, err := reader.ReadAll()
-	//if err != nil {
-	//	return nil, nil, err
-	//}
-	//Controlla che ci sia almeno un'intestazione più una riga di dati.
-	if len(records) < 2 {
-		return nil, nil, fmt.Errorf("il CSV non contiene dati")
-	}
-	//La prima riga è l'intestazione.
-	header := records[0]
-	//Trova indice colonna target
+
+	// Recupera i nomi delle colonne
+	names := df.Names()
+
+	// Cerca l'indice della colonna target
 	targetIndex := -1
-	for i, colName := range header {
-		if colName == targetColumn {
+	for i, name := range names {
+		if name == targetColumn {
 			targetIndex = i
 			break
 		}
 	}
+
+	// Se non trova la colonna target restituisce errore
 	if targetIndex == -1 {
-		return nil, nil, fmt.Errorf("colonna '%s' non trovata", targetColumn)
+		return nil, nil, fmt.Errorf("column '%s' not found", targetColumn)
 	}
-	//Righe dati (salta header)
-	data := records[1:]
-	//Prealloca X e Y con la capacità giusta per evitare riallocazioni.
-	X := make([][]float64, len(data))
-	Y := make([]float64, len(data))
-	//Itera su ogni riga di dati.
-	for i, row := range data {
-		//Verifica che la riga abbia lo stesso numero di colonne dell'intestazione.
-		if len(row) != len(header) {
-			return nil, nil, fmt.Errorf("numero colonne inconsistente alla riga %d", i+1)
-		}
-		//Converte il valore della colonna target in float64.
-		Yval, err := strconv.ParseFloat(row[targetIndex], 64)
-		if err != nil {
-			return nil, nil, fmt.Errorf("errore conversione target riga %d: %v", i+1, err)
-		}
-		Y[i] = Yval
-		//Costruisce la riga per X: tutte le colonne tranne quella target.
-		newRow := make([]float64, 0, len(row)-1)
-		for j, value := range row {
-			if j == targetIndex {
-				continue
-			}
-			//Converte il valore in float64.
-			floatVal, err := strconv.ParseFloat(value, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("errore conversione riga %d colonna %d: %v", i+1, j, err)
-			}
-			newRow = append(newRow, floatVal)
-		}
-		X[i] = newRow
+
+	// Numero di righe (samples)
+	nRows := df.Nrow()
+
+	// Numero totale di colonne
+	nCols := df.Ncol()
+
+	// Prealloca la matrice X:
+	// - una riga per ogni sample
+	// - una colonna in meno (escludiamo il target)
+	X := make([][]float64, nRows)
+	for i := range X {
+		X[i] = make([]float64, nCols-1)
 	}
+
+	// Prealloca il vettore Y (target)
+	Y := make([]float64, nRows)
+
+	// Estrae l'intera colonna target come slice di float64
+	// .Float() converte automaticamente int → float64
+	targetCol := df.Col(targetColumn).Float()
+
+	// Copia i valori nella slice Y
+	copy(Y, targetCol)
+
+	// Indice per riempire le colonne di X
+	// (serve perché stiamo saltando la colonna target)
+	xColIndex := 0
+
+	// Itera su tutte le colonne del dataframe
+	for j, name := range names {
+
+		// Salta la colonna target
+		if j == targetIndex {
+			continue
+		}
+
+		// Estrae la colonna corrente come []float64
+		col := df.Col(name).Float()
+
+		// Copia i valori nella matrice X
+		// riga per riga
+		for i := 0; i < nRows; i++ {
+			X[i][xColIndex] = col[i]
+		}
+
+		// Passa alla prossima colonna di X
+		xColIndex++
+	}
+
+	// Restituisce:
+	// X → matrice features
+	// Y → vettore target
 	return X, Y, nil
 }
 
