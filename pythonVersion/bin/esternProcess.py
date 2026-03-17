@@ -217,7 +217,7 @@ def callCodeCarbone(x_predictor, y_response):
 								   on_csv_write = "append"
 									)
 	tracker.start()
-	dataprocess.Logistic_Regression_Validation(x_predictor, y_response)
+	dataprocess.LogisticRegressionValidation(x_predictor, y_response)
 	tracker.stop()
 
 	df = pd.read_csv(f"{p.parents[1]}/results/emissions.csv")

@@ -53,6 +53,7 @@ for key, value in dtype_csv_dict.items():
         y_response_filled = dataprocess.targetColumnFillNaN(y_response) 
 
         y_predict, times = dataprocess.LogisticRegressionValidation(x_predictor, y_response_filled)
+        
         MCC = matthews_corrcoef(y_response_filled, y_predict)
           
 

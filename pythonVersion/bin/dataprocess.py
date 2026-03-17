@@ -133,7 +133,7 @@ preprocessor = ColumnTransformer(
 
 
 # Uso la classificazione con regressione logistica e LOOCV 
-model = linear_model.LogisticRegression(max_iter = 50)
+model = linear_model.LogisticRegression(max_iter=50)
 cvp = model_selection.LeaveOneOut()
 
 # preprocessare i dati è fondamentale per rendere comparabili i valori 
@@ -283,3 +283,5 @@ def readConda():
     condaF.unlink()
     return conda
  
+
+
