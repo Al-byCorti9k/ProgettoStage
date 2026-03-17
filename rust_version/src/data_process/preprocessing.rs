@@ -114,7 +114,7 @@ impl MedianInt for ChunkedArray<Int32Type> {
     type Output = i32;
     fn calculate_median(&self) -> Option<Self::Output> {
         //Raccoglie tutti i valori validi (ignora eventuali null)
-        let mut values: Vec<i32> = self.iter().filter_map(|v| v).collect();
+        let mut values: Vec<i32> = self.iter().filter_map(|v: Option<i32>| v).collect();
         
         if values.is_empty() {
             return None;
@@ -137,7 +137,7 @@ impl MedianInt for ChunkedArray<Int64Type> {
     type Output = i64;
     fn calculate_median(&self) -> Option<Self::Output> {
         //Raccoglie tutti i valori validi (ignora eventuali null)
-        let mut values: Vec<i64> = self.iter().filter_map(|v| v).collect();
+        let mut values: Vec<i64> = self.iter().filter_map(|v: Option<i64>| v).collect();
         
         if values.is_empty() {
             return None;
@@ -231,7 +231,7 @@ pub(crate) mod private {
 
     use super::{NumericCA, PolarsError};
     pub trait FillNullPolars {
-        fn fill_dataframe_mode(
+        fn fill_dataframe_median(
             &mut self,
             chuncked: NumericCA,
             idx: usize,
@@ -265,7 +265,7 @@ pub(crate) mod private {
 //soluzione migliore alla duplicazione. Sono tutti metodi "privati"
 impl private::FillNullPolars for DataFrame {
     //implementazione per riempire i null con la moda
-    fn fill_dataframe_mode(&mut self, chuncked: NumericCA, idx: usize) -> Result<(), PolarsError> {
+    fn fill_dataframe_median(&mut self, chuncked: NumericCA, idx: usize) -> Result<(), PolarsError> {
         match chuncked {
             NumericCA::Int32(ca) => {
                 let filled = ca.fill_null_with_values(ca.calculate_median().unwrap())?;
@@ -348,7 +348,7 @@ impl FillNullPolars for DataFrame {
             let s = df_i.column(&name)?;
             if s.null_count() != 0 && cat_cols.contains(name.as_str()) {
                 let chuncked = s.get_chuncked_array_from_column_type(s.dtype())?;
-                self.fill_dataframe_mode(chuncked, idx)?;
+                self.fill_dataframe_median(chuncked, idx)?;
             } else if s.null_count() != 0 && !cat_cols.contains(name.as_str()) {
                 let chuncked = s.get_chuncked_array_from_column_type(s.dtype())?;
                 self.fill_dataframe_mean(chuncked, idx)?;
