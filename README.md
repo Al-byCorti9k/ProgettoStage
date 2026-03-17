@@ -8,15 +8,21 @@ tools (like CodeCarbon and Intel VTune Profiler) of a linear regression model.
 - [Python's version](#pythons-version)
   - [Installation](#installation)
   - [Quickstart](#quickstart)
+- [Rust's version](#rusts-version)
+    - [Installation](#installation-1)
+    - [Quickstart](#quickstart-1)
+- [Go's version](#gos-version)
+    - [Installation](#installation-2)
+    - [Quickstart](#quickstart-2)
 - [License](#license)
 
 # About the project
 This project represents my thesis work for the Bachelor’s Degree in Computer Science at the University of [Milano-Bicocca](https://www.unimib.it/).
 
-At the moment is an ongoing project that aim to estimate the energy consumption of a LOOCV's linear regression model in three different programming languages:
+This project aims to estimate the energy consumption of a LOOCV's linear regression model in three different programming languages:
 - Python (complete)
-- Rust (ongoing)
-- GO (ongoing)
+- Rust (complete)
+- GO (complete)
 
 The model is trained and verified on five medical datasets, available at the "data" directory at the same level ad the "bin" directory. 
 At the end, you'll be able to make a compararision analysis 
@@ -86,7 +92,127 @@ you can consult the available dataset in this way:
 ```bash
 python Main.py -al
 ```
-You'll get all the results on the terminal and on a specific .CSV file at the default fold "results"
+You'll get all the results on the terminal and on a specific .CSV file at the default fold "results" at `.\pythoVersion\` directory.
+
+
+# Rust's version
+
+The Rust implementation performs the same LOOCV linear regression analysis on the medical datasets, with energy measurement support via Intel VTune Profiler (Windows) or CodeCarbon (Linux).
+
+### Installation
+
+1. Navigate to the `rust_version` directory:
+   ```bash
+   cd rust_version
+   ```
+   Ensure the `Cargo.toml` manifest file is present.
+
+2. Build the release binary:
+   ```bash
+   cargo build --release
+   ```
+   This will generate an executable named `rust_version` (Linux/macOS) or `rust_version.exe` (Windows) inside the `.\target\release` directory.
+
+3. **Energy measurement prerequisites**  
+   - **On Windows**: You need **PowerShell with administrator privileges** to run the `vtuneRust.ps1` script. This script invokes Intel VTune Profiler (which must be installed separately, see [Intel VTune Profiler Installation's Guide](#intel-vtune-profiler-installations-guide)) and passes the appropriate parameters to the Rust executable.  
+   - **On Linux**: Use the Python script `rust_linux.py`. It relies on [CodeCarbon](https://github.com/mlco2/codecarbon) to track energy consumption.
+   -  **Both scripts** require Python with the `pandas` library installed. You can install pandas via `pip install pandas` if not already present. The script will launch the Rust binary and monitor its energy usage.
+
+### Quickstart
+
+- **Run with energy measurement**  
+  - Windows (PowerShell as Administrator, from the `.\target\release\` directory):
+    ```powershell
+    ./vtuneRust.ps1 -d 3 -t "your_target_name"
+    ```
+    The `-d` flag selects the dataset, and `-t` is an optional label for the output file.
+  - Linux (from the `.\target\release\` directory):
+    ```bash
+    python rust_linux.py -d 3 -t "your_target_name"
+    ```
+
+- **Run without energy measurement** (direct execution from the `.\target\release\` directory)  
+  - Display help:
+    ```bash
+    ./rust_version.exe -h # windows
+    ./rust_version -h # linux
+    ```
+  - Show the dataset index mapping:
+    ```bash
+    ./rust_version.exe -l # windows
+    ./rust_version -h # linux
+    ```
+  - Normal execution with dataset index 3 (automatically select the last column as target):
+    ```bash
+    ./rust_version.exe -d 3 # windows
+    ./rust_version -h # linux
+    ```
+
+All results (metrics and energy data) will be saved in the `results` folder as CSV files `.\rust_version\` directory.
+
+# Go's version
+
+The Go implementation replicates the LOOCV linear regression analysis on the same medical datasets, with energy measurement support via Intel VTune Profiler (Windows) or CodeCarbon (Linux). The structure and usage closely follow the Rust version.
+
+### Installation
+
+1. Navigate to the `goVersion\src` directory:
+   ```bash
+   cd goVersion\src
+   ```
+
+2. Install the required Go dependencies:
+   ```bash
+   go mod tidy
+   ```
+   This command downloads and prepares all modules listed in `go.mod`.
+
+3. Build the executable:
+   ```bash
+   go build -o goVersion.exe
+   ```
+   - **On Windows**: this produces `goVersion.exe` in the current directory (`goVersion\src`).
+   - **On Linux/macOS**: you may want to omit the `.exe` extension, e.g. `go build -o goVersion`. However, the measurement scripts expect the executable to be named **exactly `goVersion.exe`** (Windows) or `goVersion` (Linux).
+
+4. **Energy measurement prerequisites**  
+   - **On Windows**: After building the executable, you can measure energy consumption using the Python script `vtuneGo.py` located in the `goVersion\scripts` directory. This script invokes Intel VTune Profiler (see [Intel VTune Profiler Installation's Guide](#intel-vtune-profiler-installations-guide)) and passes the necessary parameters to `goVersion.exe`.  
+   - **On Linux**: Use the Python script `go_linux.py` in the same `scripts` folder. It relies on [CodeCarbon](https://github.com/mlco2/codecarbon) to track energy usage.  
+   - **Both scripts** require Python with the `pandas` library installed (`pip install pandas` if needed).
+
+### Quickstart
+
+- **Run with energy measurement**  
+  - Windows (PowerShell or Command Prompt, with administrator privileges for VTune):
+    ```bash
+    cd goVersion\scripts
+    python vtuneGo.py -d 3 -t "your_target_name"
+    ```
+  - Linux:
+    ```bash
+    cd goVersion/scripts
+    python go_linux.py -d 3 -t "your_target_name"
+    ```
+  The `-d` flag selects the dataset index, and `-t` is an optional label for the output file.
+
+- **Run without energy measurement** (direct execution)  
+  - Display help:
+    ```bash
+    ./goVersion.exe -h        # on Windows
+    ./goVersion -h            # on Linux (if built without .exe)
+    ```
+  - Show the dataset index mapping::
+    ```bash
+    ./goVersion.exe -v        # on Windows
+    ./goVersion -v            # on Linux (if built without .exe)
+    ```
+  - Normal execution with dataset index 3:
+    ```bash
+    ./goVersion.exe -d 3
+    ```
+
+All results (performance metrics and energy data) are saved as CSV files in the `goVersion/results` directory.
+
+
 # License
 
 This project integrates with Intel® VTune™ Profiler through its command-line interface (CLI).
