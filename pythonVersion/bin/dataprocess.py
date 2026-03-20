@@ -113,17 +113,17 @@ def columnPredictionSelect(columnName, dataFrame ):
 numeric_trasformer = Pipeline(steps =
                               [ 
                             ('mean', SimpleImputer(strategy="mean")),
-                            ('scaler', StandardScaler())
+                           # ('scaler', StandardScaler())
                               ])
 
 categorical_trasformer = Pipeline(steps = 
                              [
                                  ('median', SimpleImputer(strategy="median")),
-                                 ('onehot', OneHotEncoder(handle_unknown="ignore"))
+                              #   ('onehot', OneHotEncoder(handle_unknown="ignore"))
                              ]     
                                   
                                   )
-# specifico solo per la colonna target. Riempie solo le colonne con celle vuote
+# pipeline per il preprocessing dei samples
 preprocessor = ColumnTransformer(
     transformers=[
         ('num', numeric_trasformer, selector(dtype_exclude="category")),
@@ -133,7 +133,7 @@ preprocessor = ColumnTransformer(
 
 
 # Uso la classificazione con regressione logistica e LOOCV 
-model = linear_model.LogisticRegression(max_iter=50)
+model = linear_model.LinearRegression()
 cvp = model_selection.LeaveOneOut()
 
 # preprocessare i dati è fondamentale per rendere comparabili i valori 
@@ -164,16 +164,29 @@ def targetColumnFillNaN(y_response):
 # viene effettuata la LOOCV predittiva, in modo da ottenere 
 # le previsioni di ciascun fold, per poi valutare la prestazione
 # del modello con la metrica MCC
-def LogisticRegressionValidation(x_predictor, y_response):
+def regressionValidation(x_predictor, y_response):
    
     start = time.time()
+    
     y_predict = model_selection.cross_val_predict(model, x_predictor, y_response, cv = cvp )
+
     end = time.time()
+
+    # trasforma la funzione per il treshold in una versione applicabile element-wise ad un vettore
+    vec_treshold = np.vectorize(regressionTreshold)
+    y_predict = vec_treshold(y_predict)
     
     seconds = end - start
  
     return y_predict, seconds
 
+def regressionTreshold(x):
+    if x >= 0.5:
+        return 1
+    else:
+        return 0
+
+     
 
 # funzione che permette di scegliere il metodo di calcolo dei consumi energetici. Su linux è imperativo 
 # codeCarbon, su windows si può effettuare una scelta tra CodeCarbon e Intel VTune Profiler

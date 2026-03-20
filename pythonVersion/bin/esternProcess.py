@@ -1,5 +1,7 @@
 #classe per comunicazione con i moduli esterni. In particolare, con VTune Profiler e CodeCarbon per il calcolo dei consumi energetici
 
+# è consigliato usare quelle librerie con conda, quindi ho implementato il supporto per quei tipi di enviroment.
+
 import pathlib
 from datetime import datetime
 import subprocess
@@ -13,14 +15,17 @@ from codecarbon import OfflineEmissionsTracker
 
 import dataprocess
 
-
+# per nominare in base alla data e l'ora i report
 now = datetime.now()
 now_str = now.strftime("%Y-%m-%d_%Hh-%Mm-%Ss")
 
 p = pathlib.Path(__file__)
+# percorso salvataggio csv
 p_csv = pathlib.Path(p).parents[1] / "results" / now_str
+# nome csv
 exp_csv = f"experiment_{now_str}.csv"
 f_csv = pathlib.Path(p).parents[1] / "results" / exp_csv
+# percorso alla cartella contenente il progetto. Serve per subprocess 
 main_path = pathlib.PurePath(p).parents[1] / "bin"
 
 
@@ -217,7 +222,7 @@ def callCodeCarbone(x_predictor, y_response):
 								   on_csv_write = "append"
 									)
 	tracker.start()
-	dataprocess.LogisticRegressionValidation(x_predictor, y_response)
+	dataprocess.regressionValidation(x_predictor, y_response)
 	tracker.stop()
 
 	df = pd.read_csv(f"{p.parents[1]}/results/emissions.csv")
@@ -226,3 +231,5 @@ def callCodeCarbone(x_predictor, y_response):
 	
 	cleaner(p.parents[1] / "results")	
 	return dt
+
+
