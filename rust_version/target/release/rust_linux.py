@@ -16,6 +16,7 @@ def run_experiment():
     parser = argparse.ArgumentParser(description="Runner per programma Rust con monitoraggio CodeCarbon")
     parser.add_argument('-d', nargs='*', type=str, help='Vettore numerico')
     parser.add_argument('-t', nargs='*', type=str, help='Vettore di stringhe')
+   
     
     args = parser.parse_args()
     d_vector = args.d if args.d is not None else []
@@ -42,7 +43,7 @@ def run_experiment():
             cmd_list.extend(["-d", d_vector[i]])
         if t_vector:
             cmd_list.extend(["-t", t_vector[i]])
-
+        cmd_list.extend("-r")
         tracker = OfflineEmissionsTracker(
             country_iso_code="ITA",
             output_dir=str(output_dir),
@@ -77,6 +78,9 @@ def run_experiment():
                 
                 df_exp.to_csv(target_file, index=False)
                 print(f"\nDato ({ultimo_consumo} kWh) inserito in: {target_file.name}")
+                # dopo l'aggiunta del valore
+                df_exp = pd.read_csv(target_file)
+                print(df_exp)
             
             csv_carbon.unlink()
 

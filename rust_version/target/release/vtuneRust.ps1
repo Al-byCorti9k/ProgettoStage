@@ -12,6 +12,7 @@ $pythonScript = "vtuneRust.py"				# Script Python per elaborazione aggiuntiva
 $datasets = @()		# Lista dei dataset passati con -d
 $targets = @()		# Lista dei target passati con -t
 
+
 for ($i = 0; $i -lt $args.Count; $i++) {
     if ($args[$i] -eq "-d") {
         $j = $i + 1
@@ -55,6 +56,8 @@ if ($datasets.Count -eq 0) {
    }
 }
 
+
+
 # --- Ciclo di Esecuzione VTune ---
 $totalIter = $iterations.Count
 for ($idx = 0; $idx -lt $totalIter; $idx++) {
@@ -75,6 +78,9 @@ for ($idx = 0; $idx -lt $totalIter; $idx++) {
 
     Write-Host "`n--- Avvio Profiling [$($idx + 1)/$totalIter]: Input $currentInputId ---" -ForegroundColor Cyan
 
+    $fixedParam = "-r"  # Il parametro fisso che vuoi aggiungere
+    $argArray += $fixedParam           # Aggiungi il parametro fisso
+    
     # --- Esecuzione della raccolta dati con VTune ---
     #    -collect system-overview : raccolta dati di sistema
     #    -data-limit=500          : limite massimo dati (MB)

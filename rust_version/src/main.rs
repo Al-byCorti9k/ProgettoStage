@@ -16,7 +16,7 @@ pub mod machine_learning;
 pub mod utils;
 
 use crate::data_process::errors::AppError;
-use crate::data_process::preprocessing::{ColumnsTypeConvertion, FillNullPolars, ScalerEncoder};
+use crate::data_process::preprocessing::{ColumnsTypeConvertion, FillNullPolars};
 use crate::machine_learning::validation::get_metrics;
 
 fn main() -> Result<(), AppError> {
@@ -73,11 +73,12 @@ fn main() -> Result<(), AppError> {
 
         //riempimento dei valori nulli
         df.cat_num_cols_to_fill()?;
+        
 
         //dopo le conversioni, estraggo la colonna target dal dataframe originale
-        let target_cols: Vec<i32> = df
+        let target_cols: Vec<f64> = df
             .column(&target_name)?
-            .i32()?
+            .f64()?
             .into_no_null_iter()
             .collect();
 
@@ -85,7 +86,7 @@ fn main() -> Result<(), AppError> {
         df.drop_in_place(&target_name)?;
 
         //scalatura e one-hot encoding
-        let sample_cols = df.scaler_encoder_df(index, &target_name)?;
+        let sample_cols = df;
 
         //converto in ndarray1 e ndarray2
         let (sample_cols, target_col) = sample_cols.build_ndarrays(target_cols)?;
@@ -112,8 +113,10 @@ fn main() -> Result<(), AppError> {
             metrics.energy,
         );
     }
-    //stampa a schermo i risultati
+    //stampa a schermo i risultati, solo se non chiamato dallo script
+    if !args.result {
     final_results.print_table();
+    }
     //Scrive il csv con i risultati
     final_results.write_csv()?;
     println!("csv built at \"Results\" folder");

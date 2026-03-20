@@ -27,6 +27,14 @@ pub struct Args {
         help = "List of selectable datasets (defaults to false)"
     )]
     pub list: bool,
+
+    #[arg(
+        short, 
+        long, 
+        action = ArgAction::SetTrue, 
+        help = "Disable the display of results in the terminal"
+    )]
+    pub result: bool,
 }
 //metodo per la struct args che fa in modo che non ci siano argomenti ripetuti
 //per dataset e column, inoltre se column.len != dataset.len, pareggia.

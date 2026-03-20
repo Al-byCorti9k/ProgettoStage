@@ -27,8 +27,8 @@ pub trait ColumnsTypeConvertion {
 
     fn unwrapping_column(&mut self, target_column: Option<&str>) -> String;
 
-    fn build_ndarrays(&self, target_cols: Vec<i32>)
-    -> Result<(Array2<f64>, Array1<i32>), AppError>;
+    fn build_ndarrays(&self, target_cols: Vec<f64>)
+    -> Result<(Array2<f64>, Array1<f64>), AppError>;
 }
 
 impl ColumnsTypeConvertion for DataFrame {
@@ -49,7 +49,7 @@ impl ColumnsTypeConvertion for DataFrame {
             self.apply(*col, |s| s.cast(&DataType::Float64).unwrap())?;
         }
         //Effettuo la conversione sulla colonna target.
-        self.apply(target_name, |s| s.cast(&DataType::Int32).unwrap())?;
+        self.apply(target_name, |s| s.cast(&DataType::Float64).unwrap())?;
 
         Ok(())
     }
@@ -76,8 +76,8 @@ impl ColumnsTypeConvertion for DataFrame {
     }
     fn build_ndarrays(
         &self,
-        target_cols: Vec<i32>,
-    ) -> Result<(Array2<f64>, Array1<i32>), AppError> {
+        target_cols: Vec<f64>,
+    ) -> Result<(Array2<f64>, Array1<f64>), AppError> {
         //features: f64
         let sample_arr = self.to_ndarray::<Float64Type>(IndexOrder::Fortran)?;
 

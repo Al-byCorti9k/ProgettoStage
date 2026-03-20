@@ -64,7 +64,7 @@ def main():
     print(f"Cartella risultati: {results_dir}")
     print(f"Elaborazione ID: {args.id}")
 
-    # 1. Estrazione Energia
+    #  Estrazione Energia
     raw_energy = 0.0
     if vtune_csv.exists():
         raw_energy = get_energy_from_vtune_csv(vtune_csv)
@@ -73,10 +73,10 @@ def main():
         print(f"Attenzione: File {vtune_csv.name} non trovato in {results_dir}.")
         return 
 
-    # 2. Conversione
+    #  Conversione
     energy_kwh = mj_to_kwh(raw_energy)
     
-    # 3. Pulizia file e cartelle VTune
+    #  Pulizia file e cartelle VTune
     if vtune_csv.exists():
         vtune_csv.unlink()
         print(f"Rimosso file: {vtune_csv.name}")
@@ -85,20 +85,23 @@ def main():
         shutil.rmtree(vtune_folder)
         print(f"Rimosso cartella: {vtune_folder.name}")
 
-    # 4. Inserimento nel file esperimento più recente
+    #  Inserimento nel file esperimento più recente
     target_file = get_latest_experiment_file(results_dir)
     
     if target_file:
         try:
             df = pd.read_csv(target_file, index_col = False)
-            print(df.tail(5))
             df["energy consumption (kWh)"] = energy_kwh
             df.to_csv(target_file, index=False)
             print(f"Successo: {energy_kwh:.10f} kWh inseriti in {target_file.name}")
+            # Dopo l'aggiornamento
+            df = pd.read_csv(target_file, index_col = False)
+            print(df)
         except Exception as e:
             print(f"Errore durante l'aggiornamento del file CSV: {e}")
     else:
         print(f"Errore: Nessun file 'experiment_rust_*.csv' trovato in {results_dir}")
+    
 
 if __name__ == "__main__":
     main()

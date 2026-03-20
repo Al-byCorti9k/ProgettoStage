@@ -2,14 +2,14 @@
 use crate::data_process::errors::AppError;
 use indicatif::{ParallelProgressIterator, ProgressStyle};
 use linfa::prelude::*;
-use linfa_logistic::LogisticRegression;
+use linfa_linear::LinearRegression;
 use ndarray::{ArrayView1, ArrayView2};
 use rayon::prelude::*;
 use std::time::Instant;
 
 pub fn get_metrics<'a>(
     samples: ArrayView2<'a, f64>,
-    target: ArrayView1<'a, i32>,
+    target: ArrayView1<'a, f64>,
 ) -> Result<Metrics, AppError> {
 
     let mut metrics = Metrics::new();
@@ -24,6 +24,9 @@ pub fn get_metrics<'a>(
     let original = ArrayView1::from(&original);
     let prediction = ArrayView1::from(&prediction);
 
+    //sogliatura dei valori previsti
+    let prediction = thresholding(prediction.view());
+    let prediction = ArrayView1::from(&prediction);
     let mcc = get_mcc(original, prediction)?;
     metrics.set_mcc(mcc);
     metrics.set_time(time);
@@ -37,8 +40,8 @@ pub fn get_metrics<'a>(
 //una reference
 fn leave_one_out_cross_validation<'a>(
     samples: ArrayView2<'a, f64>,
-    target: ArrayView1<'a, i32>,
-) -> Result<(Vec<i32>, Vec<i32>), AppError> {
+    target: ArrayView1<'a, f64>,
+) -> Result<(Vec<f64>, Vec<f64>), AppError> {
     let dataset = DatasetView::new(samples, target);
     //otteniamo il numero di campioni (righe)
     let n = dataset.nsamples();
@@ -51,14 +54,12 @@ fn leave_one_out_cross_validation<'a>(
     let folds: Vec<_> = dataset.fold(n).into_iter().collect();
 
     //Eseguiamo la computazione in parallelo grazie a Rayon
-    let results: Result<Vec<(i32, i32)>, AppError> = folds
+    let results: Result<Vec<(f64, f64)>, AppError> = folds
         //genera iteratori che lavorano in parallelo
         .into_par_iter()
         .progress_with_style(style)
         .map(|(train, valid)| {
-            let model = LogisticRegression::default()
-                .max_iterations(50)
-                .with_intercept(true)
+            let model = LinearRegression::default()
                 .fit(&train)
                 .map_err(AppError::from)?;
 
@@ -79,7 +80,7 @@ fn leave_one_out_cross_validation<'a>(
 }
 
 //restituisce l'MCC. Ha bisogno di riceve in input i risultati della Leave One out folding.
-fn get_mcc<'a>(y_true: ArrayView1<'a, i32>, y_pred: ArrayView1<'a, i32>) -> Result<f32, AppError> {
+fn get_mcc<'a>(y_true: ArrayView1<'a, f64>, y_pred: ArrayView1<'a, f64>) -> Result<f32, AppError> {
     let y_true: ndarray::ArrayBase<ndarray::OwnedRepr<usize>, ndarray::Dim<[usize; 1]>> =
         y_true.to_owned().mapv(|x| x as usize);
     let y_pred = y_pred.to_owned().mapv(|x| x as usize);
@@ -120,4 +121,12 @@ impl Metrics {
     fn set_mcc(&mut self, mcc: f32) {
         self.mcc = mcc;
     }
+}
+
+
+use ndarray::Array1;
+
+fn thresholding(prediction: ArrayView1<f64>) -> Array1<f64> {
+    // Convertiamo la vista in un array posseduto
+    prediction.to_owned().mapv(|x| if x > 0.5 { 1.0 } else { 0.0 })
 }
