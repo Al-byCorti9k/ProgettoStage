@@ -99,6 +99,9 @@ def run_experiment():
                 # Sovrascrive il file con i dati arricchiti
                 df_exp.to_csv(target_file, index=False)
                 print(f"\nDato ({ultimo_consumo} kWh) inserito in: {target_file.name}")
+                # dopo l'aggiunta del valore
+                df_exp = pd.read_csv(target_file)
+                print(df_exp)
             
             # Elimina il file emissions.csv per non accumulare dati di iterazioni precedenti
             csv_carbon.unlink()

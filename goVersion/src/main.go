@@ -49,7 +49,7 @@ func main() {
 			targetColumn = dfInfo.Df.Names()[numberCols-1]
 		}
 		//qui avviene il preprocessing, quindi riempimento dei valori nulli, la scalatura standard e il one-hot-encoding
-		dfInfoProcessed := dataprocess.FillColumnsNanValues(&dfInfo).StandardScalar().OneHotEncoding(targetColumn)
+		dfInfoProcessed := dataprocess.FillColumnsNanValues(&dfInfo) //StandardScalar().OneHotEncoding(targetColumn)
 		//genero un file generico dove viene esportato il dataframe processato
 		//var buf bytes.Buffer
 		//Esportiamo il DataFrame nel file
@@ -78,7 +78,9 @@ func main() {
 		)
 	}
 	//stampa i risultati a schermo
-	results.PrintRows()
+	if !args.Rargs {
+		results.PrintRows()
+	}
 	//Salva su file
 	results.SaveResultsToPath()
 }

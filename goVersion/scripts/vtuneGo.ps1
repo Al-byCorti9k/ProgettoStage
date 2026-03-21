@@ -79,6 +79,9 @@ for ($idx = 0; $idx -lt $totalIter; $idx++) {
 
     Write-Host "`n--- Avvio Profiling [$($idx + 1)/$totalIter]: Input $currentInputId ---" -ForegroundColor Cyan
 
+    $fixedParam = "-r"  # Il parametro fisso che vuoi aggiungere
+    $argArray += $fixedParam           # Aggiungi il parametro fisso
+
     # --- Esecuzione della raccolta dati con VTune ---
     #    -collect system-overview : raccolta dati di sistema
     #    -data-limit=500          : limite massimo dati (MB)

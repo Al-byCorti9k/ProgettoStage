@@ -88,6 +88,8 @@ def main():
             df["energy consumption (kWh)"] = energy_kwh
             df.to_csv(target_file, index=False)
             print(f"Successo: {energy_kwh:.10f} kWh inseriti in {target_file.name}")
+            df = pd.read_csv(target_file)
+            print(df)
         except Exception as e:
             print(f"Errore durante l'aggiornamento del file CSV: {e}")
     else:
