@@ -1,4 +1,4 @@
-// Ora importa le librerie Breeze
+
 import breeze.linalg.{DenseMatrix, DenseVector}
 import breeze.stats.{mean, median}
 
@@ -13,8 +13,8 @@ object ScalaVersionBreeze {
 
   def main(args: Array[String]): Unit = {
     if (args.length < 1) {
-      println("Uso: scala ScalaVersionBreeze <percorso_file_csv>")
-      println("Esempio: scala ScalaVersionBreeze ./data/mio_dataset.csv")
+      println("usage: scala ScalaVersionBreeze <path_file_csv>")
+      println("Example: scala ScalaVersionBreeze ./data/my_dataset.csv")
       System.exit(1)
     }
 
