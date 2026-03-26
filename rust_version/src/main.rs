@@ -1,138 +1,124 @@
-//il programma implementa una prima versione in cui semplicemente leggiamo
-//un dataset con polars, convertiamo i dati correttamente, e poi addestriamo un modello
-//di regressione lineare
+use linfa::prelude::*;
+use linfa_linear::LinearRegression;
+use ndarray::Array1;
 
+use polars::prelude::*;
+use rayon::prelude::*;
 use std::env;
+use std::path::PathBuf;
+use std::time::Instant;
 
-use crate::data_process::data::view_dataset;
-use crate::utils::data_view::Args;
-use crate::utils::dataset_from_path::{ResultData, generate_df, get_dataset_path};
-use clap::Parser;
-
-use ndarray::{ArrayView1, ArrayView2};
-
-pub mod data_process;
-pub mod machine_learning;
-pub mod utils;
-
-use crate::data_process::errors::AppError;
-use crate::data_process::preprocessing::{ColumnsTypeConvertion, FillNullPolars};
-use crate::machine_learning::validation::get_metrics;
-
-fn main() -> Result<(), AppError> {
-    //configura l'apparenza dei dataframe-polars
-    configure_the_environment();
-
-    //parsa gli argomenti da linea di comando
-    let mut args = Args::parse();
-
-    if args.list {
-        view_dataset()?;
-        return Ok(());
+fn main() {
+    // Leggi nome dataset da riga di comando
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        eprintln!("Uso: {} <dataset.csv>", args[0]);
+        std::process::exit(1);
     }
+    let dataset_name = &args[1];
+    
+    
+    // Usa il percorso fornito così com'è, aggiungendo .csv solo se non c'è estensione
+    let mut path = PathBuf::from(dataset_name);
+    if path.extension().is_none() {
+        path.set_extension("csv");
+    }
+   
 
-    //effettua un controllo sugli argomenti
-    args.argument_parse()?;
+    // Carica CSV con Polars 
+    let mut df = CsvReadOptions::default()
+        .with_infer_schema_length(Some(500))
+        .try_into_reader_with_file_path(Some(path.into()))
+        .expect("reader error")
+        .finish()
+        .expect("csv reading error");
+    
 
-    let mut final_results = ResultData::new();
+    //  Converti tutte le colonne in f64 
+    let column_names: Vec<String> = df
+        .get_column_names()
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
 
-    //cicla sul numero di dataset inseriti. Se non sono stati inseriti, avvia il default case.
-    for i in 0..args.dataset.as_ref().map(|v| v.len()).unwrap_or(1) {
-        //otteniamo l'indice del dataset selezionato da CLI
-        let index = args.dataset.as_ref().and_then(|v| Some(v[i]));
+    for name in column_names {
+        df.apply(&name, |s| s.cast(&DataType::Float64).unwrap())
+            .unwrap();
+    }
+    //  Riempimento nulli 
 
-        //otteniamo il target name selezionato da CLI
-        let target_name = args
-            .target_columns
-            .as_ref()
-            .and_then(|v| Some(v[i].clone()));
-
-        //otteniamo il dataframe polars dal percorso
-        let (path, dataset_name) = get_dataset_path(index)?;
-        let mut df = generate_df(path)?;
-
-        //visualizziamo il dataframe
-        println! {"\n Selected dataset: \t {} \n {}", dataset_name, df.tail(Some(5)) };
-        //non vengono effettuati ulteriori conti se è stata selezionata questa opzione
-        if args.view {
+    let column_names: Vec<String> = df
+        .get_column_names()
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    let n_cols = column_names.len();
+    for (idx, name) in column_names.iter().enumerate() {
+        let col = df.column(name).unwrap().clone();
+        if col.null_count() == 0 {
             continue;
         }
-
-        //estraiamo il nome. Se l'option è None, ritorna il nome dell'ultima colonna
-        let target_name = df.unwrapping_column(target_name.as_deref());
-
-        //effettua un controllo sulle colonne inserite. Un qualsiasi errore farà saltare il ciclo corrente
-        if let Err(e) = args.target_columns_check(&df, target_name.as_str()) {
-            eprintln!("\n Column '{}' ignored: \n {:?} \n", target_name, e);
-
-            continue;
-        }
-
-        //conversione in i32 della colonna target e in f64 delle altre
-        df.sample_target_convertion(index, &target_name)?;
-
-        //riempimento dei valori nulli
-        df.cat_num_cols_to_fill()?;
-        
-
-        //dopo le conversioni, estraggo la colonna target dal dataframe originale
-        let target_cols: Vec<f64> = df
-            .column(&target_name)?
-            .f64()?
-            .into_no_null_iter()
-            .collect();
-
-        //elimino la colonna target dal dataframe
-        df.drop_in_place(&target_name)?;
-
-        //scalatura e one-hot encoding
-        let sample_cols = df;
-
-        //converto in ndarray1 e ndarray2
-        let (sample_cols, target_col) = sample_cols.build_ndarrays(target_cols)?;
-
-        //ottengo le corrispettive view
-        let sample_cols = ArrayView2::from(&sample_cols);
-
-        let target_col = ArrayView1::from(&target_col);
-
-        //otteniamo le metriche
-        let metrics = get_metrics(sample_cols, target_col)?;
-
-        //salvo tutte le informazioni dell'iterazione corrente nella struct
-        //results
-        let os = std::env::consts::OS;
-
-        final_results.add_record(
-            dataset_name,
-            os,
-            metrics.time,
-            metrics.time / 1000.0,
-            target_name.as_str(),
-            metrics.mcc,
-            metrics.energy,
-        );
+        let fill_val = if idx == n_cols - 1 {
+            col.f64().unwrap().median().unwrap()
+        } else {
+            col.f64().unwrap().mean().unwrap()
+        };
+        let filled = col.f64().unwrap().fill_null_with_values(fill_val).unwrap();
+        df.replace_column(idx, filled).unwrap();
     }
-    //stampa a schermo i risultati, solo se non chiamato dallo script
-    if !args.result {
-    final_results.print_table();
-    }
-    //Scrive il csv con i risultati
-    final_results.write_csv()?;
-    println!("csv built at \"Results\" folder");
-    Ok(())
-}
 
-// Configure Polars with ENV vars
-// Rust richiede di usare unsafe Rust per la configurazione delle variabili
-// d'ambiente. Queste servono per personalizzare l'aspetto delle tabelle
-// Polars
-pub fn configure_the_environment() {
-    unsafe {
-        env::set_var("POLARS_FMT_TABLE_ROUNDED_CORNERS", "1"); // mette gli angoli stondati
-        env::set_var("POLARS_FMT_MAX_COLS", "20"); // per settare il numero massimo di colonne mostrate
-        env::set_var("POLARS_FMT_MAX_ROWS", "10"); // stesso ma per le righe
-        env::set_var("POLARS_FMT_STR_LEN", "50"); // numero massimo di caratteri per stringhe stampati
-        env::set_var("POLARS_FMT_TABLE_HIDE_COLUMN_DATA_TYPES", "1"); //nasconde il dtype delle colonne
-    }
+    // Separa target (ultima colonna) e features
+    let target_name = df.get_column_names().last().unwrap().to_owned();
+    let target_col: Vec<f64> = df
+        .column(&target_name)
+        .unwrap()
+        .f64()
+        .unwrap()
+        .into_no_null_iter()
+        .collect();
+    let mut features_df = df.clone();
+    features_df.drop_in_place(&target_name).unwrap();
+    let samples = features_df
+        .to_ndarray::<Float64Type>(IndexOrder::Fortran)
+        .unwrap();
+    let target = Array1::from(target_col);
+
+    // LOOCV con linfa 
+    let dataset = DatasetView::new(samples.view(), target.view());
+    let n = dataset.nsamples();
+    let folds: Vec<_> = dataset.fold(n).into_iter().collect();
+
+    let start = Instant::now();
+    let results: Vec<(f64, f64)> = folds
+        .into_par_iter()
+        .map(|(train, valid)| {
+            let model = LinearRegression::default()
+                .fit(&train)
+                .expect("Fit failed");
+            let pred = model.predict(&valid);
+            let true_val = valid.targets()[0];
+            let pred_val = pred[0];
+            (true_val, pred_val)
+        })
+        .collect();
+    let elapsed = start.elapsed().as_secs_f64();
+
+    //  Calcola MCC
+    let (y_true, y_pred): (Vec<f64>, Vec<f64>) = results.into_iter().unzip();
+    let y_true_usize: Array1<usize> = y_true.into_iter().map(|x| x as usize).collect();
+    let y_pred_binary: Array1<usize> = y_pred
+        .into_iter()
+        .map(|x| if x > 0.5 { 1 } else { 0 })
+        .collect();
+
+    let cm = y_pred_binary
+        .confusion_matrix(&y_true_usize)
+        .expect("confusin matrix error");
+    let mcc = cm.mcc();
+
+    //  Stampa risultati 
+    println!("---metrics---");
+    println!("Dataset: {}", dataset_name);
+    println!("MCC: {:.6}", mcc);
+    println!("Time : {:.6} s", elapsed);
 }
