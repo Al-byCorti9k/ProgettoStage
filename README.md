@@ -28,11 +28,11 @@ The Rust (v. 1.92.0) implementation provides a  version of the model with energy
 
       * **On Linux**:
         ```bash
-        cp target/release/rust_version .
+        cp target/release/rust_version 
         ```
       * **On Windows**:
         ```powershell
-        copy target\release\rust_version.exe .
+        copy target\release\rust_version.exe 
         ```
 
     These commands extract the executable from the build folder and place it in the root for easier access.
@@ -42,7 +42,7 @@ The Rust (v. 1.92.0) implementation provides a  version of the model with energy
 To execute the program and capture energy consumption data, run the dedicated Python script:
 
 ```bash
-python rustVersion.py <file>
+python rustVersion.py <path_file>
 ```
 
 -----
@@ -79,7 +79,7 @@ The Go (v. 1.26.0) implementation provides a  version of the model with energy t
 To run the program and include energy consumption metrics, use the following command:
 
 ```bash
-python goVersion.py <file>
+python goVersion.py <path_file>
 ```
 
 -----
@@ -119,7 +119,7 @@ The Scala (v. 1.12.7) implementation provides a  version of the model with energ
 To run the Scala implementation with energy consumption tracking, execute:
 
 ```bash
-python scalaVersion.py <file>
+python scalaVersion.py <path_file>
 ```
 
------
+
