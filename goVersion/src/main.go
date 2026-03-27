@@ -16,7 +16,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal("Usage: go run main.go <path_to_csv_file> (with or without .csv)")
+		log.Fatalf("Usage: %s <path_to_csv_file>", os.Args[0])
 	}
 	filePath := os.Args[1]
 
@@ -49,7 +49,7 @@ func main() {
 	fmt.Println("---metrics---")
 	fmt.Printf("Dataset: %s\n", filePath)
 	fmt.Printf("MCC: %.6f\n", mcc)
-	fmt.Printf("time: %.4f seconds\n", elapsed)
+	fmt.Printf("time LOOCV: %.4f seconds\n", elapsed)
 }
 
 // converte il csv in un gota dataframe

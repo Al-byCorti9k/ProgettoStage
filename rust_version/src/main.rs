@@ -1,9 +1,8 @@
 use linfa::prelude::*;
 use linfa_linear::LinearRegression;
 use ndarray::Array1;
-
-use polars::prelude::*;
 use rayon::prelude::*;
+use polars::prelude::*;
 use std::env;
 use std::path::PathBuf;
 use std::time::Instant;
@@ -12,7 +11,7 @@ fn main() {
     // Leggi nome dataset da riga di comando
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
-        eprintln!("Uso: {} <dataset.csv>", args[0]);
+        eprintln!("Usage: {} <dataset.csv>", args[0]);
         std::process::exit(1);
     }
     let dataset_name = &args[1];
@@ -120,5 +119,5 @@ fn main() {
     println!("---metrics---");
     println!("Dataset: {}", dataset_name);
     println!("MCC: {:.6}", mcc);
-    println!("Time : {:.6} s", elapsed);
+    println!("Time LOOCV: {:.6} seconds", elapsed);
 }
