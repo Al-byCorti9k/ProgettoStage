@@ -13,14 +13,14 @@ object ScalaVersionBreeze {
 
   def main(args: Array[String]): Unit = {
     if (args.length < 1) {
-      println("usage: scala ScalaVersionBreeze <path_file_csv>")
-      println("Example: scala ScalaVersionBreeze ./data/my_dataset.csv")
+      println("usage: ./scalaVersion <path_file_csv>")
+      
       System.exit(1)
     }
 
     val filePath = Paths.get(args(0)).toAbsolutePath.normalize()
     if (!Files.exists(filePath)) {
-      println(s"File non trovato: $filePath")
+      println(s"File not found: $filePath")
       System.exit(1)
     }
 
@@ -40,10 +40,11 @@ object ScalaVersionBreeze {
 
     println("\n----metrics----")
     println(s"Dataset: ${filePath.getFileName}")
-    println(f"Tempo LOOCV: $timeSeconds%.3f secondi")
     println(f"MCC: $mcc%.8f")
+    println(f"Time LOOCV: $timeSeconds%.3f seconds")
+    
   }
-
+  // carica il csv
   def loadCSV(file: File): DenseMatrix[Double] = {
   val source = scala.io.Source.fromFile(file)
   try {
@@ -63,7 +64,7 @@ object ScalaVersionBreeze {
     source.close()
   }
 }
-
+  //riempie i valori nulli delle celle vuote
   def imputeMissingValues(data: DenseMatrix[Double]): DenseMatrix[Double] = {
     val nRows = data.rows
     val nCols = data.cols
@@ -72,7 +73,7 @@ object ScalaVersionBreeze {
       val col = data(::, j).toArray
       val nonMissing = col.filter(!_.isNaN)
       if (nonMissing.isEmpty) {
-        println(s"Attenzione: colonna $j tutta NaN, imputazione con 0.0")
+        println(s"warning: column $j is NaN, filling with 0.0")
         val replacement = 0.0
         for (i <- 0 until nRows) imputed(i, j) = replacement
       } else {
