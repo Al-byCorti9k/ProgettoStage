@@ -64,7 +64,7 @@ object ScalaVersionBreeze {
     source.close()
   }
 }
-  //riempie i valori nulli delle celle vuote
+  // riempie i valori nulli delle celle vuote
   def imputeMissingValues(data: DenseMatrix[Double]): DenseMatrix[Double] = {
     val nRows = data.rows
     val nCols = data.cols
@@ -85,13 +85,15 @@ object ScalaVersionBreeze {
     }
     imputed
   }
-
+  // trova i valori dei pesi 
   def fitOLS(X: DenseMatrix[Double], y: DenseVector[Double]): DenseVector[Double] = {
     val n = X.rows
     val X_withIntercept = DenseMatrix.horzcat(DenseMatrix.ones[Double](n, 1), X)
+    // questa istruzione risolve il sistema (X^t*X) pesi = X^t *y, dove "pesi" è l'incognita.
+    // la formula proviene dalla derivata rispetto ai pesi della ordinary least square
     (X_withIntercept.t * X_withIntercept) \ (X_withIntercept.t * y)
   }
-
+  // prova a predirre i valori
   def predictOLS(x: DenseVector[Double], coeff: DenseVector[Double]): Double = {
     coeff(0) + coeff(1 until coeff.length).dot(x)
   }
