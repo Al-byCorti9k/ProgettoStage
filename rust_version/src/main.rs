@@ -120,7 +120,7 @@ fn main() -> Result<(), AppError> {
     Ok(())
 }
 
-// Configure Polars with ENV vars
+
 // Rust richiede di usare unsafe Rust per la configurazione delle variabili
 // d'ambiente. Queste servono per personalizzare l'aspetto delle tabelle
 // Polars
