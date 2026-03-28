@@ -28,8 +28,7 @@ def main():
     from codecarbon import OfflineEmissionsTracker
 
     # Directory per i risultati 
-    output_dir = pathlib.Path.cwd() / "results"
-    output_dir.mkdir(exist_ok=True)
+    output_dir = pathlib.Path.cwd()
 
     tracker = OfflineEmissionsTracker(
         country_iso_code="ITA",

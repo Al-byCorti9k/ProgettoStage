@@ -13,7 +13,7 @@ This project provides tools to compute LOOCV, MCC, and estimated energy consumpt
 # Rust's Version
 
 The Rust (v. 1.92.0) implementation provides a  version of the model with energy tracking support via a Python wrapper.
-
+> The official Rust installation guide: https://rust-lang.org/tools/install/
 ### Installation
 
 1.  **Build the Project**: Navigate to the Rust project directory and run:
@@ -28,11 +28,11 @@ The Rust (v. 1.92.0) implementation provides a  version of the model with energy
 
       * **On Linux**:
         ```bash
-        cp target/release/rust_version 
+        cp target/release/rust_version .
         ```
       * **On Windows**:
         ```powershell
-        copy target\release\rust_version.exe 
+        copy target\release\rust_version.exe .
         ```
 
     These commands extract the executable from the build folder and place it in the root for easier access.
@@ -50,7 +50,7 @@ python rustVersion.py <path_file>
 # Go's Version
 
 The Go (v. 1.26.0) implementation provides a  version of the model with energy tracking support via a Python wrapper.
-
+> The official Go installation guide: https://go.dev/doc/install
 
 ### Installation
 
@@ -87,6 +87,7 @@ python goVersion.py <path_file>
 # Scala's Version
 
 The Scala (v. 1.12.7) implementation provides a  version of the model with energy tracking support via a Python wrapper.
+>I suggest following the instructions at https://docs.scala-lang.org/getting-started/install-scala.html, depending on your system. On Linux, check that coursier is on your PATH and make sure you have Java installed.
 
 ### Installation
 
