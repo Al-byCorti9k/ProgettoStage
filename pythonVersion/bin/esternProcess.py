@@ -103,13 +103,13 @@ def flagExitCodeChecker():
 			if lineF[-1:] != "0" and lineF[-1:] != ":":
 				
 				if  lineIndex == 1:
-					print("il csv non è stato creato\n")
+					print("The CSV file was not created \n")
 					
 				if lineIndex == 2:
-					print("La collezione non è andata a buon fine\n")
+					print("The collection was not successful \n")
 					print(line)
 				if lineIndex == 3:
-					print("il report non è andato a buon fine\n")
+					print("The report was not successful\n")
 					print(line)
 				
 			lineIndex += 1
@@ -131,11 +131,11 @@ output = p.parents[1].joinpath("results",exp_csv)
 def newProcessCommands(dataset):
 	
 	args = f" -i {dataset} -e --elevated"
-	print("inizia la collezione dei dati, attendi qualche minuto...\n")
+	print("Data collection started, wait...\n")
 
 	strderrCollector = run_command(condaPathSelect(p_csv) + args)
 	
-	print("\n La collezione dei dati è conclusa! Inizia la conversione in formato csv...\n")
+	print("\n Data collection is complete! The conversion to CSV format is starting...\n")
 	stderrConverter= run_command(converter_to_csv)
 	
 	if output.exists():
@@ -197,7 +197,7 @@ def VTuneProfilerInterface(dataset, columnName):
 	try:
 		stimatedEnergy = energyConsumption[1][2]
 	except Exception:
-		print("VTune Profiler non è riuscito ad ottenere i consumi energetici")
+		print("VTune Profiler failed to retrieve energy consumption data.")
 		stimatedEnergy = 0
 	return stimatedEnergy
 

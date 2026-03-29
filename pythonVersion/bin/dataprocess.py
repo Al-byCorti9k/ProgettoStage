@@ -92,10 +92,10 @@ def columnPredictionSelect(columnName, dataFrame ):
                 x_predictor = dataFrame.drop(columnName[columnIndex], axis=1)
                 y_response = dataFrame[columnName[columnIndex]]
             else:
-                print("\nla colonna selezionata \""+columnName[columnIndex]+"\" non è categorica\n")
+                print("\n Column selected: \""+columnName[columnIndex]+"\" is not categorical\n")
                 columnNotExist = True
         else:
-            print("\nla colonna selezionata \""+columnName[columnIndex]+"\" non è presente nel dataset\n")
+            print("\n Column selected: \""+columnName[columnIndex]+"\" is does not belongs to any datasets\n")
             columnNonCat =  True
     else:
         #caso di default, dove scelgo l'ultima colonna
@@ -103,7 +103,7 @@ def columnPredictionSelect(columnName, dataFrame ):
         y_response =  dataFrame[dataFrame.columns[-1]]
         if y_response.dtype != "category":
             columnNonCat = True
-            print("\nla colonna selezionata \""+dataFrame.columns[-1]+"\" non è sus categorica\n")
+            print("\n Column selected \""+dataFrame.columns[-1]+"\" is not categorical\n")
     return x_predictor, y_response, columnNotExist, columnNonCat
 
 
@@ -177,14 +177,15 @@ def LogisticRegressionValidation(x_predictor, y_response):
 
 # funzione che permette di scegliere il metodo di calcolo dei consumi energetici. Su linux è imperativo 
 # codeCarbon, su windows si può effettuare una scelta tra CodeCarbon e Intel VTune Profiler
-def energyConsumption(operatingSystem, activation, forceCodeCarbon, name_csv, x_predictor, y_response ):
+def energyConsumption(operatingSystem, activation, forceCodeCarbon, name_csv, x_predictor, y_response, elevated ):
     dt = 0
     if activation:   
         if forceCodeCarbon:
             dt = esternProcess.callCodeCarbone(x_predictor, y_response)
         elif operatingSystem == "Windows":
             VTuneSelectedDataset = datasets.index(name_csv) + 1
-            print("chiama VTune Profiler")
+            if not elevated:
+                print("Call Intel VTune Profiler")
             #print(f"VTune dataset selected: {VTuneSelectedDataset}")
             dt = esternProcess.VTuneProfilerInterface(VTuneSelectedDataset, y_response.name)
         else:
@@ -255,6 +256,7 @@ def createCSV(savePath):
 def createTXT():
     file_path = f"{pathlib.PurePath(p).parents[1]}/results/figlio_{now_str}.txt"
     with open(file_path, "w") as f:
+        # non è importante scriverci qualcosa dentro
         f.write("Ciao, questo è un file di testo del figlio!\n")
 
 

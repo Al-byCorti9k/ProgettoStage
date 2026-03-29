@@ -33,7 +33,7 @@ def get_energy_from_vtune_csv(f_csv):
 
 def get_latest_experiment_file(directory):
     # Trova il file experiment_go_...csv con la data di modifica più recente.
-    files = list(directory.glob("experiment_go_*.csv"))  # <-- cambiato da rust a go
+    files = list(directory.glob("experiment_go_*.csv")) 
     if not files:
         return None
     return max(files, key=lambda x: x.stat().st_mtime)
@@ -58,7 +58,7 @@ def main():
     print(f"Result path: {results_dir}")
     print(f"Processing ID: {args.id}")
 
-    # 1. Estrazione Energia
+    # Estrazione Energia
     raw_energy = 0.0
     if vtune_csv.exists():
         raw_energy = get_energy_from_vtune_csv(vtune_csv)
@@ -67,10 +67,10 @@ def main():
         print(f"Warning: File {vtune_csv.name} not found in {results_dir}.")
         return
 
-    # 2. Conversione
+    # Conversione
     energy_kwh = mj_to_kwh(raw_energy)
 
-    # 3. Pulizia file e cartelle VTune
+    # Pulizia file e cartelle VTune
     if vtune_csv.exists():
         vtune_csv.unlink()
         print(f"Removed file: {vtune_csv.name}")
@@ -79,7 +79,7 @@ def main():
         shutil.rmtree(vtune_folder)
         print(f"Removed folder: {vtune_folder.name}")
 
-    # 4. Inserimento nel file esperimento più recente
+    # Inserimento nel file esperimento più recente
     target_file = get_latest_experiment_file(results_dir)
 
     if target_file:

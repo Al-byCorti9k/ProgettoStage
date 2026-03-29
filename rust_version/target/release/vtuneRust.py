@@ -8,7 +8,7 @@ import shutil
 def mj_to_kwh(energy_in_mj):
     # Converte MilliJoule in Kilowattora.
     # 1 kWh = 3,600,000,000 mJ
-    return (float(energy_in_mj) / (3.6 * 10**9))
+    return float(energy_in_mj) / (3.6 * 10**9)
 
 def get_energy_from_vtune_csv(f_csv):
     # Estrae il valore energetico associato a Package_0 dal CSV di VTune.
@@ -55,7 +55,7 @@ def main():
     # CREAZIONE CARTELLA RESULTS SE NON ESISTE
     results_dir.mkdir(parents=True, exist_ok=True)
     
-    # -------------------------
+    
 
     vtune_csv = results_dir / f"summary_report__d_{args.id}.csv"
     vtune_folder = results_dir / f"vtune_results__d_{args.id}"
@@ -64,7 +64,7 @@ def main():
     print(f"Result path: {results_dir}")
     print(f"Processing ID: {args.id}")
 
-    # 1. Estrazione Energia
+    # Estrazione Energia
     raw_energy = 0.0
     if vtune_csv.exists():
         raw_energy = get_energy_from_vtune_csv(vtune_csv)
@@ -73,10 +73,10 @@ def main():
         print(f"Warning: File {vtune_csv.name} not found in {results_dir}.")
         return 
 
-    # 2. Conversione
+    # Conversione
     energy_kwh = mj_to_kwh(raw_energy)
     
-    # 3. Pulizia file e cartelle VTune
+    # Pulizia file e cartelle VTune
     if vtune_csv.exists():
         vtune_csv.unlink()
         print(f"Removed file: {vtune_csv.name}")
@@ -85,7 +85,7 @@ def main():
         shutil.rmtree(vtune_folder)
         print(f"Removed folder: {vtune_folder.name}")
 
-    # 4. Inserimento nel file esperimento più recente
+    # Inserimento nel file esperimento più recente
     target_file = get_latest_experiment_file(results_dir)
     
     if target_file:

@@ -63,7 +63,7 @@ def multipleDatasetSelection(args):
                 dtype_dict, name_csv = dataprocess.datasetsSelection(userSelection)
                 result_dict.update({name_csv : dtype_dict})
             else:
-                print("il numero che hai inserito  \""+str(userSelection)+"\" non corrisponde a nessun dataset")
+                print("The number you entered  \""+str(userSelection)+"\" does not match any dataset")
     return result_dict
 
 # mostra la lista di associazione tra il dataset e il numero che lo rappresenta
