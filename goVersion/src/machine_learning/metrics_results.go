@@ -237,5 +237,5 @@ func (results *ResultData) SaveResultsToPath() {
 		return
 	}
 
-	fmt.Printf("File saved to: %s\n", filePath)
+	fmt.Printf("\nFile saved to: %s\n", filePath)
 }

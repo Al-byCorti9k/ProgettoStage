@@ -4,7 +4,7 @@ import argparse
 import pandas as pd
 
 def get_session_files(directory, n):
-    """Recupera gli ultimi n file experiment_go_...csv creati."""
+    # Recupera gli ultimi n file experiment_go_...csv creati.
     files = list(directory.glob("experiment_go_*.csv"))  # <-- cambiato da rust a go
     if not files:
         return []
@@ -15,13 +15,13 @@ def get_session_files(directory, n):
 def merge_session_results():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', nargs='*', type=str)
-    parser.add_argument('-t', nargs='*', type=str)
+    
     args = parser.parse_args()
 
     n = len(args.d) if args.d else 0
 
     if n <= 1:
-        print("Nessuna fusione necessaria (0 o 1 dataset fornito).")
+        print("No merge necessary (0 or 1 dataset provided).")
         return
 
     # --- GESTIONE PERCORSI CORRETTA ---
@@ -30,14 +30,14 @@ def merge_session_results():
 
     # Recuperiamo gli n file più recenti (che corrispondono a questa sessione)
     session_files = get_session_files(output_dir, n)
-    # Invertiamo per avere ordine cronologico: [0] = più vecchio, [-1] = ultimo
+    
     session_files.reverse()
 
     if len(session_files) < 2:
-        print(f"Trovati solo {len(session_files)} file, impossibile procedere alla fusione.")
+        print(f"Only {len(session_files)} files found, unable to proceed with the merge.")
         return
 
-    print(f"\n--- Fusione di {len(session_files)} file in corso ---")
+    print(f"\n--- Merging {len(session_files)} files in progress ---")
 
     # Carichiamo il primo file della sessione (il più vecchio)
     main_df = pd.read_csv(session_files[0])
@@ -47,11 +47,11 @@ def merge_session_results():
         temp_df = pd.read_csv(extra_file)
         main_df = pd.concat([main_df, temp_df], ignore_index=True)
         extra_file.unlink()
-        print(f"File {extra_file.name} fuso e rimosso.")
+        print(f"File {extra_file.name} merged and removed.")
 
     # Sovrascriviamo il primo file con il dataframe completo
     main_df.to_csv(session_files[0], index=False)
-    print(f"Risultato finale salvato in: {session_files[0].name}")
+    print(f"Final result saved in: {session_files[0].name}")
 
 if __name__ == "__main__":
     merge_session_results()

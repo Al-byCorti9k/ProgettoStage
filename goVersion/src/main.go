@@ -78,7 +78,9 @@ func main() {
 		)
 	}
 	//stampa i risultati a schermo
-	results.PrintRows()
+	if !args.PArgs {
+		results.PrintRows()
+	}
 	//Salva su file
 	results.SaveResultsToPath()
 }

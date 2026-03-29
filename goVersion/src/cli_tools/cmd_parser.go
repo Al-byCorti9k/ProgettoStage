@@ -18,6 +18,7 @@ type ConfigArgs struct {
 	DArgs []int
 	CArgs []string
 	VArgs bool
+	PArgs bool
 }
 
 // funzione che parsa gli argomenti da linea di comando ed effettua i controlli
@@ -31,6 +32,8 @@ func ParseCliArgument() ConfigArgs {
 	pflag.StringArrayVarP(&myArgs.CArgs, "target_column", "t", nil, "Select the target column by its name. If multiple columns are selected and a column name contains a comma, use the following syntax:\n-t column1 -t column2\n Otherwise, you should use:\n-t column1,column2")
 
 	pflag.BoolVarP(&myArgs.VArgs, "view_datasets", "v", false, "view all available datasets with their IDs")
+
+	pflag.BoolVarP(&myArgs.PArgs, "print_results", "p", false, "Deactivate  results print")
 
 	pflag.Parse()
 	//effettuo il controllo degli argomenti. Il controllo sulla colonna è

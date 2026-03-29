@@ -7,10 +7,9 @@ import pandas as pd
 from codecarbon import OfflineEmissionsTracker
 
 def get_latest_experiment_file(directory):
-    """
-    Trova il file experiment_rust_*.csv più recente in base alla data di modifica.
-    Usato per identificare il file appena creato dall'eseguibile Go.
-    """
+
+  #  Trova il file experiment_rust_*.csv più recente in base alla data di modifica.
+  #  Usato per identificare il file appena creato dall'eseguibile Go.
     files = list(directory.glob("experiment_go_*.csv"))
     if not files:
         return None
@@ -19,11 +18,11 @@ def get_latest_experiment_file(directory):
 
 def run_experiment():
     # --- PARSING DEGLI ARGOMENTI ---
-    parser = argparse.ArgumentParser(description="Runner per programma Go con monitoraggio CodeCarbon")
+    parser = argparse.ArgumentParser(description="Runner for Go program with CodeCarbon monitoring")
     # -d accetta zero o più valori (es. -d 2 3)
-    parser.add_argument('-d', nargs='*', type=str, help='Vettore numerico')
+    parser.add_argument('-d', nargs='*', type=str, help='datasets ID')
     # -t accetta zero o più valori (es. -t "Male (1=Yes,0=No)" "Exitus")
-    parser.add_argument('-t', nargs='*', type=str, help='Vettore di stringhe')
+    parser.add_argument('-t', nargs='*', type=str, help='target column names')
     
     args = parser.parse_args()
     d_vector = args.d if args.d is not None else []
@@ -31,7 +30,7 @@ def run_experiment():
 
     # Verifica che se vengono forniti target, il loro numero sia uguale ai dataset
     if len(t_vector) > 0 and len(d_vector) != len(t_vector):
-        print("Errore: I vettori -d e -t devono avere la stessa lunghezza.")
+        print("Error: vector -d and -t must have the same lenght.")
         return
 
     # --- PREPARAZIONE DELLE CARTELLE DI OUTPUT ---
@@ -47,7 +46,7 @@ def run_experiment():
 
     # --- CICLO PRINCIPALE: UNA ITERAZIONE PER OGNI COPPIA DATASET/TARGET ---
     for i in range(iterations):
-        print(f"\n--- Inizio Iterazione {i+1}/{iterations} ---")
+        print(f"\n--- Starting Iteration {i+1}/{iterations} ---")
         
         # Costruzione della riga di comando per l'eseguibile Rust
         # L'eseguibile si trova nella stessa cartella di questo script, con nome goVersion.exe
@@ -72,7 +71,7 @@ def run_experiment():
             # Esecuzione dell'eseguibile Rust con gli argomenti costruiti
             subprocess.run(cmd_list, check=True)
         except Exception as e:
-            print(f"Errore durante l'esecuzione di Go: {e}")
+            print(f"Error during Go execution: {e}")
         finally:
             # Arresto del tracker (salva i dati di consumo nel file emissions.csv)
             tracker.stop()
@@ -98,7 +97,7 @@ def run_experiment():
                 
                 # Sovrascrive il file con i dati arricchiti
                 df_exp.to_csv(target_file, index=False)
-                print(f"\nDato ({ultimo_consumo} kWh) inserito in: {target_file.name}")
+                print(f"\nData ({ultimo_consumo} kWh) entered in: {target_file.name}")
             
             # Elimina il file emissions.csv per non accumulare dati di iterazioni precedenti
             csv_carbon.unlink()
@@ -106,7 +105,7 @@ def run_experiment():
     # --- FASE DI FUSIONE (MERGE) DEI FILE GENERATI ---
     # Se sono stati generati più di un file (cioè più iterazioni con output distinti)
     if len(session_files) > 1:
-        print(f"\n--- Fusione di {len(session_files)} file in corso ---")
+        print(f"\n--- Merging {len(session_files)} files in progress ---")
         
         # Carica il primo file della sessione (il più vecchio, secondo l'ordine di esecuzione)
         main_df = pd.read_csv(session_files[0])
@@ -117,14 +116,14 @@ def run_experiment():
             main_df = pd.concat([main_df, temp_df], ignore_index=True)
             # Elimina il file ora ridondante (dopo la fusione)
             extra_file.unlink()
-            print(f"File {extra_file.name} fuso e rimosso.")
+            print(f"File {extra_file.name} merged and removed.")
         
         # Salva il DataFrame unificato nel primo file della sessione
         main_df.to_csv(session_files[0], index=False)
-        print(f"Risultato finale salvato in: {session_files[0].name}")
+        print(f"Final results saved in: {session_files[0].name}")
     else:
         # Caso in cui c'è un solo file (o nessuno): non serve fare merge
-        print("\nNessuna fusione necessaria (singolo file o nessun file generato).")
+        print("\nNo merge necessary (single file or no files generated).")
 
 if __name__ == "__main__":
     run_experiment()
