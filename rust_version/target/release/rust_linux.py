@@ -6,23 +6,23 @@ import pandas as pd
 from codecarbon import OfflineEmissionsTracker
 
 def get_latest_experiment_file(directory):
-    """Trova il file experiment_rust_...csv più recente in assoluto."""
+    # Trova il file experiment_rust_...csv più recente in assoluto.
     files = list(directory.glob("experiment_rust_*.csv"))
     if not files:
         return None
     return max(files, key=lambda x: x.stat().st_mtime)
 
 def run_experiment():
-    parser = argparse.ArgumentParser(description="Runner per programma Rust con monitoraggio CodeCarbon")
-    parser.add_argument('-d', nargs='*', type=str, help='Vettore numerico')
-    parser.add_argument('-t', nargs='*', type=str, help='Vettore di stringhe')
+    parser = argparse.ArgumentParser(description="Runner for Rust program with CodeCarbon monitoring")
+    parser.add_argument('-d', nargs='*', type=str, help='Datasets  ID')
+    parser.add_argument('-t', nargs='*', type=str, help='Target column names')
     
     args = parser.parse_args()
     d_vector = args.d if args.d is not None else []
     t_vector = args.t if args.t is not None else []
 
     if len(t_vector) > 0 and len(d_vector) != len(t_vector):
-        print("Errore: I vettori -d e -t devono avere la stessa lunghezza.")
+        print("Error: vector -d and -t must have the same lenght.")
         return
 
     p = pathlib.Path(__file__)
@@ -35,7 +35,7 @@ def run_experiment():
     session_files = []
 
     for i in range(iterations):
-        print(f"\n--- Inizio Iterazione {i+1}/{iterations} ---")
+        print(f"\n--- Starting Iteration {i+1}/{iterations} ---")
         
         cmd_list = [str(p.parent / "rust_version")]
         if d_vector:
@@ -55,7 +55,7 @@ def run_experiment():
         try:
             subprocess.run(cmd_list, check=True)
         except Exception as e:
-            print(f"Errore durante l'esecuzione di Rust: {e}")
+            print(f"Error during Rust execution: {e}")
         finally:
             tracker.stop()
 
@@ -76,13 +76,13 @@ def run_experiment():
                 df_exp["energy consumption (kWh)"] = ultimo_consumo
                 
                 df_exp.to_csv(target_file, index=False)
-                print(f"\nDato ({ultimo_consumo} kWh) inserito in: {target_file.name}")
+                print(f"\n Data ({ultimo_consumo} kWh) entered in: {target_file.name}")
             
             csv_carbon.unlink()
 
     # --- FASE DI FUSIONE (MERGE) ---
     if len(session_files) > 1:
-        print(f"\n--- Fusione di {len(session_files)} file in corso ---")
+        print(f"\n--- Merging {len(session_files)} files in progress ---")
         
         # Carichiamo il primo file (il più "vecchio" della sessione attuale)
         main_df = pd.read_csv(session_files[0])
@@ -93,13 +93,13 @@ def run_experiment():
             main_df = pd.concat([main_df, temp_df], ignore_index=True)
             # Eliminiamo il file ridondante dopo la fusione
             extra_file.unlink()
-            print(f"File {extra_file.name} fuso e rimosso.")
+            print(f"File {extra_file.name} merged and removed.")
         
         # Salviamo tutto nel primo file della sessione
         main_df.to_csv(session_files[0], index=False)
-        print(f"Risultato finale salvato in: {session_files[0].name}")
+        print(f"Final results saved in: {session_files[0].name}")
     else:
-        print("\nNessuna fusione necessaria (singolo file o nessun file generato).")
+        print("\nNo merge necessary (single file or no files generated).")
 
 if __name__ == "__main__":
     run_experiment()

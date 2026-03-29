@@ -11,22 +11,29 @@ use crate::data_process::errors::AppError;
 pub struct Args {
     #[arg(short, long, help = "select target column from its name.", num_args(1..))]
     pub target_columns: Option<Vec<String>>,
-    #[arg(short, long, help = "select a dataset from its number", num_args(1..))]
+    #[arg(short, long, help = "select a dataset from its number.", num_args(1..))]
     pub dataset: Option<Vec<usize>>,
     #[arg(
         short, 
         long, 
         action = ArgAction::SetTrue, 
-        help = "get visual snapshots of selected datasets (defaults to false)"
+        help = "get visual snapshots of selected datasets (defaults to false)."
     )]
     pub view: bool,
     #[arg(
         short, 
         long, 
         action = ArgAction::SetTrue, 
-        help = "List of selectable datasets (defaults to false)"
+        help = "List of selectable datasets (defaults to false)."
     )]
     pub list: bool,
+    #[arg(
+        short, 
+        long, 
+        action = ArgAction::SetTrue, 
+        help = "print results."
+    )]
+    pub print: bool,
 }
 //metodo per la struct args che fa in modo che non ci siano argomenti ripetuti
 //per dataset e column, inoltre se column.len != dataset.len, pareggia.

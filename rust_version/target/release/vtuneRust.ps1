@@ -31,7 +31,7 @@ for ($i = 0; $i -lt $args.Count; $i++) {
 
 # --- Controllo di Coerenza ---
 if ($targets.Count -gt 0 -and $datasets.Count -ne $targets.Count) {
-    Write-Error "Errore: Hai fornito dei target (-t), ma il numero ($($targets.Count)) non corrisponde a quello dei dataset ($($datasets.Count))."
+    Write-Error "Error: you gave some target columns (-t), but their number ($($targets.Count)) does not match the number of datasets ($($datasets.Count))."
     exit 1
 }
 
@@ -72,8 +72,9 @@ for ($idx = 0; $idx -lt $totalIter; $idx++) {
     }
     $currentResDir = "$resultDirBase`__$idString"      # cartella risultati VTune
     $currentReport = "$reportFileBase`__$idString.csv" # file di riepilogo
-
-    Write-Host "`n--- Avvio Profiling [$($idx + 1)/$totalIter]: Input $currentInputId ---" -ForegroundColor Cyan
+    # nasconde la stampa dei risultati dell'algoritmo chiamato
+    $argArray += "-p"
+    Write-Host "`n--- Start Profiling [$($idx + 1)/$totalIter]: Input $currentInputId ---" -ForegroundColor Cyan
 
     # --- Esecuzione della raccolta dati con VTune ---
     #    -collect system-overview : raccolta dati di sistema
@@ -95,7 +96,7 @@ for ($idx = 0; $idx -lt $totalIter; $idx++) {
           -- $targetApp @argArray
 
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "Generazione report VTune..." -ForegroundColor Yellow
+        Write-Host "Generating VTune report..." -ForegroundColor Yellow
 	# Generazione del report di riepilogo in formato CSV
         & vtune -report summary `
               -result-dir $currentResDir `
@@ -105,31 +106,31 @@ for ($idx = 0; $idx -lt $totalIter; $idx++) {
 
          # --- Chiamata allo script Python per eventuale post‑elaborazione ---
         if (Test-Path ".\$pythonScript") {
-            Write-Host "Esecuzione script Python con input: $currentInputId" -ForegroundColor Magenta
+            Write-Host "Running a Python script with input: $currentInputId" -ForegroundColor Magenta
             # PASSAGGIO PARAMETRO: Passiamo solo la variabile $currentInputId
             & python ".\$pythonScript" $currentInputId
         } else {
-            Write-Warning "Script Python non trovato in: .\$pythonScript"
+            Write-Warning "Python script not found in: .\$pythonScript"
         }
 
     } else {
-        Write-Warning "Errore durante l'esecuzione per l'input: $currentInputId"
+        Write-Warning "Error during execution for the input: $currentInputId"
     }
 
     #  --- Pausa di raffreddamento tra un test e l'altro ---
     if ($idx -lt $totalIter -1) {
-        Write-Host "Attesa di 60 secondi per il raffreddamento del sistema..." -ForegroundColor Gray
+        Write-Host "Waiting 60 seconds for system cooldown..." -ForegroundColor Gray
         Start-Sleep -Seconds 60
     }
 }
 
-Write-Host "`nProcesso completato per tutte le iterazioni." -ForegroundColor Green
+Write-Host "`nProcess completed for all iterations." -ForegroundColor Green
 
 # --- Fusione Finale dei Risultati (solo se ci sono più dataset) ---
 if ($datasets.Count -gt 1) {
     $mergeScript = "merge_results.py"
     if (Test-Path ".\$mergeScript") {
-        Write-Host "`n--- Avvio fusione dei file CSV ---" -ForegroundColor Cyan
+        Write-Host "`n--- Starting the merging of CSV files ---" -ForegroundColor Cyan
         # Passiamo esattamente gli stessi dataset e target usati per VTune
         $mergeArgs = @("-d") + $datasets
         if ($targets.Count -gt 0) {
@@ -137,6 +138,6 @@ if ($datasets.Count -gt 1) {
         }
         & python ".\$mergeScript" $mergeArgs
     } else {
-        Write-Warning "Script di fusione non trovato: $mergeScript"
+        Write-Warning "Merge script not found: $mergeScript"
     }
 }

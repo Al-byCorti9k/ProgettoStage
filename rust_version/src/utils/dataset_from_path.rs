@@ -3,7 +3,7 @@ use crate::data_process::errors::AppError;
 use polars::frame::DataFrame;
 use polars::prelude::CsvReadOptions;
 use polars::prelude::SerReader;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
@@ -84,6 +84,13 @@ impl ResultData {
         let starting_path = Path::new(".");
         //vogliamo prelevare un dataset dal percorso "data"
         let mut csv_path = starting_path.join("..").join("..").join("results");
+        //aggiunta la creazione della directory results, se inesistente
+        if !csv_path.exists() {
+            fs::create_dir_all(&csv_path)?;
+            println!("Directory created. csv saved at: {:?}", csv_path);
+        } else {
+            println!("csv saved at: {:?}", csv_path);
+        }
 
         //il nome del file viene formattato con la data
         let now = chrono::Local::now();
@@ -123,10 +130,10 @@ impl ResultData {
                 method
             )?;
         }
-
+        
         Ok(())
     }
-//metodo che stampa i valori della stuct ResultData sul terminale. Stampa ogni riga, che si riferisce ad ogni iterazione del ciclo del main
+    //metodo che stampa i valori della stuct ResultData sul terminale. Stampa ogni riga, che si riferisce ad ogni iterazione del ciclo del main
     pub fn print_table(&self) {
         let len = self.dataset.len();
         if len == 0 {

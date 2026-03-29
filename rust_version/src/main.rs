@@ -113,10 +113,12 @@ fn main() -> Result<(), AppError> {
         );
     }
     //stampa a schermo i risultati
-    final_results.print_table();
+    if !args.print {
+        final_results.print_table();
+    }
     //Scrive il csv con i risultati
     final_results.write_csv()?;
-    println!("csv built at \"Results\" folder");
+    
     Ok(())
 }
 
