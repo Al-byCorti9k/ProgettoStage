@@ -24,7 +24,7 @@ This project aims to estimate the energy consumption of a LOOCV's linear regress
 - Rust (complete)
 - GO (complete)
 
-The model is trained and verified on five medical datasets, available at the "data" directory at the same level ad the "bin" directory. 
+The model is trained and verified on five medical datasets, available at the "data" directory at the same level as the "languageVersion" folder. 
 At the end, you'll be able to make a compararision analysis 
 
 # Requirements
@@ -35,8 +35,8 @@ The supported operating Systems are Windows and Linux. I made my tests on a mach
 - Processor:	Intel(R) Core(TM) i7-1065G7 CPU @ 1.30GHz (1.50 GHz)
 - RAM:	16,0 GB 
 
-on Windows 11 and Linux Mint-22.2-cinnamon-64bit. Intel VTune Profiler works only on Intel CPU, but CodeCarbon comes with support for all CPU with RAPL interface, so both Intel and AMD processor that respects these conditions are allowed. 
-To be fair, My code Itself has no particolar system's requirements; all restriction derive from the module installed for the energy computation. For major detail of how it works, I suggest to visit [this](https://mlco2.github.io/codecarbon/methodology.html)
+on Windows 11 and Linux Mint-22.2-cinnamon-64bit. CPUs with RAPL interfaces are supported; if is not your case, you should use CodeCarbon on constant mode, although this will give you rough measurements.
+To be fair, the code itself has no particolar system's requirements; all restriction derive from the module installed for the energy computation. For major detail of how it works, I suggest to visit [this](https://docs.codecarbon.io/latest/introduction/methodology/)
 and [this](https://www.intel.com/content/www/us/en/docs/vtune-profiler/get-started-guide/2025-4/overview.html)
 
 Then, you'll need to create a folder named "results" at the same level of the "bin" folder of each program's version.
@@ -57,7 +57,6 @@ sudo chmod -R a+r /sys/class/powercap/*
 # Python's version
 You'll need to run python 3.14. I suggest you to install all the packets in a separated enviroment. My guide will illustrate how to create a miniconda3 enviroment to run properly this program.
 
-**Note**: you have to run the program in a conda enviroment if you use Intel VTune Profiler. 
 ## Installation
  - install minicoda following this [guide](https://www.anaconda.com/docs/getting-started/miniconda/install#quickstart-install-instructions)
  - Then create a specific enviroment with a command like this:
@@ -198,12 +197,12 @@ The Go implementation replicates the LOOCV linear regression analysis on the sam
   - Display help:
     ```bash
     ./goVersion.exe -h        # on Windows
-    ./goVersion -h            # on Linux (if built without .exe)
+    ./goVersion -h            # on Linux 
     ```
   - Show the dataset index mapping::
     ```bash
     ./goVersion.exe -v        # on Windows
-    ./goVersion -v            # on Linux (if built without .exe)
+    ./goVersion -v            # on Linux 
     ```
   - Normal execution with dataset index 3:
     ```bash
@@ -224,4 +223,4 @@ Intel® VTune™ Profiler is the property of Intel Corporation.
 
 This project uses the CodeCarbon library as a dependency.
 CodeCarbon is not distributed with this project and must be installed separately.
-Its use is subject to the terms of its original open-source license
+Its use is subject to the terms of its original open-source license.
